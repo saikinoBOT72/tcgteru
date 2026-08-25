@@ -8,83 +8,96 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#122922; --board:#1c3a30; --line:#2f5346;
-  --cream:#fbf3df; --ink:#25211a; --sub:#6f6a5c;
-  --front:#d9534f; --back:#e0a63d; --king:#3fae91;
-  --enemy-accent:#5b7fae; --danger:#e05656; --ok:#5fbf8f;
+  --ink:#000; --paper:#fff; --line:#000; --sub:#555;
+  --danger:#c0392b; --ok:#2c8a5f;
 }
 *{box-sizing:border-box;}
 body{
-  margin:0; background:var(--bg); color:var(--cream);
+  margin:0; background:var(--paper); color:var(--ink);
   font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
-  padding:16px; max-width:520px; margin:0 auto;
+  padding:16px; max-width:560px; margin:0 auto;
 }
 h1{
   font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:20px;
-  margin:0 0 2px; letter-spacing:0.02em;
+  margin:0 0 2px; letter-spacing:0.02em; color:var(--ink);
 }
-.sub{font-size:12px; color:#9fb3a8; margin:0 0 14px;}
-.board{background:var(--board); border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px;}
-.row{display:flex; gap:8px; justify-content:center; margin:4px 0;}
-.row.enemy-back, .row.player-back{ }
+.sub{font-size:12px; color:var(--sub); margin:0 0 14px;}
+.board{background:var(--paper); border:1.5px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px;}
+.row{display:flex; gap:8px; justify-content:center; margin:4px 0; align-items:stretch;}
+
+/* ---- team-wide SP (outside cards: monochrome) ---- */
+.teamsp{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:11px; color:var(--ink); font-weight:700;}
+.teamsp-dots{display:flex; gap:4px;}
+.teamsp-dots .sp-dot{width:11px; height:11px; border-radius:50%; border:1.5px solid var(--ink); background:var(--paper);}
+.teamsp-dots .sp-dot.filled{background:var(--ink);}
+
+/* ---- card ---- */
 .card-tile{
-  flex:1; max-width:110px; background:var(--cream); color:var(--ink);
-  border-radius:10px; padding:6px 6px 7px; border:2px solid transparent;
-  position:relative; min-height:80px; cursor:default; transition:transform .1s;
+  flex:1; max-width:132px; aspect-ratio:5/7; background:var(--paper); color:var(--ink);
+  border-radius:10px; border:1.5px solid var(--line);
+  position:relative; cursor:default; display:flex; flex-direction:column; overflow:hidden;
 }
-.card-tile.empty{background:transparent; border:2px dashed #3d6152; color:#5f8977; display:flex; align-items:center; justify-content:center; font-size:11px;}
-.card-tile.dead{opacity:0.35;}
+.card-tile.empty{border-style:dashed; color:var(--sub); align-items:center; justify-content:center; font-size:11px; aspect-ratio:5/7;}
+.card-tile.dead{filter:grayscale(1); opacity:0.4;}
 .card-tile.clickable{cursor:pointer;}
 .card-tile.clickable:active{transform:scale(0.97);}
-.card-tile.selected{border-color:#2c2c2a; box-shadow:0 0 0 2px var(--ink) inset;}
-.card-tile.targetable{border-color:var(--danger); box-shadow:0 0 0 2px var(--danger);}
-.role-tag{
-  font-size:9px; font-weight:700; letter-spacing:0.05em; padding:1px 5px; border-radius:999px;
-  display:inline-block; margin-bottom:3px; color:#fff;
-}
-.role-front{background:var(--front);} .role-back{background:var(--back); color:#3a2a06;} .role-king{background:var(--king);}
-.card-name{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:12px; line-height:1.2; margin-bottom:3px;}
-.hpbar{height:6px; background:#e4dcc4; border-radius:4px; overflow:hidden; margin-bottom:3px;}
-.hpfill{height:100%; background:#c9463e; transition:width .3s;}
-.hptext{font-size:9px; color:var(--sub); margin-bottom:3px;}
-.sp-dots{display:flex; gap:2px; margin-bottom:3px;}
-.sp-dot{width:7px; height:7px; border-radius:50%; background:#d8cfa9; border:1px solid #b8ac7e;}
-.sp-dot.filled{background:#2c8a5f; border-color:#1f6b47;}
-.teamsp{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:11px; color:#cfe3da;}
-.teamsp-dots{margin-bottom:0;}
-.teamsp-dots .sp-dot{width:11px; height:11px;}
-.status-badge{font-size:9px; font-weight:700; padding:1px 5px; border-radius:6px; display:inline-block;}
-.status-burn{background:#f0dcd6; color:#a3402f;}
-.status-poison{background:#e6dcf2; color:#5c3a99;}
-.status-freeze{background:#dcecf7; color:#2a6ea0;}
-.status-paralyze{background:#f7f0c9; color:#8a6f0c;}
+.card-tile.selected{border-width:3px;}
+.card-tile.targetable{border-style:dashed; border-width:2px; background:#f2f2f2;}
+.card-tile.movedest{border-style:dotted; border-width:2px; background:#f2f2f2;}
+
+.card-head{display:flex; align-items:center; justify-content:space-between; padding:3px 4px 2px; font-size:8px; font-weight:700;}
+.elem-badge{border:1px solid var(--ink); border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; font-size:9px;}
+.rarity-badge{border:1px solid var(--ink); border-radius:3px; padding:0 3px; font-size:8px;}
+
+.card-art{flex:0 0 34%; display:flex; align-items:center; justify-content:center; font-size:26px; border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);}
+
+.card-name-row{display:flex; align-items:baseline; justify-content:space-between; padding:2px 4px 0; gap:4px;}
+.card-name{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:9.5px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.card-hp{font-size:8px; color:var(--ink); white-space:nowrap;}
+.hpbar-mono{height:3px; margin:2px 4px 3px; background:var(--paper); border:1px solid var(--ink); border-radius:2px; overflow:hidden;}
+.hpbar-mono-fill{height:100%; background:var(--ink);}
+
+.card-skills{flex:1; display:flex; border-top:1px solid var(--ink); min-height:0;}
+.skill-col{flex:1; display:flex; flex-direction:column; min-width:0;}
+.skill-col.front-col{border-right:1px solid var(--ink);}
+.skill-cell{flex:1; padding:2px 3px; font-size:7px; line-height:1.15; display:flex; align-items:center; overflow:hidden;}
+.skill-col.back-col .skill-cell:first-child{border-bottom:1px solid var(--ink);}
+.skill-cell .skill-role{font-weight:700; margin-right:2px;}
+
+.card-status{position:absolute; top:16px; right:2px; display:flex; flex-direction:column; gap:1px; align-items:flex-end;}
+.status-badge{font-size:7px; font-weight:700; padding:0 3px; border-radius:4px; border:1px solid var(--ink); background:var(--paper);}
+.status-burn{color:var(--danger);}
+.status-poison{color:#5c3a99;}
+.status-freeze{color:#2a6ea0;}
+.status-paralyze{color:#8a6f0c;}
+
 #log{
-  background:var(--board); border:1px solid var(--line); border-radius:14px;
+  background:var(--paper); border:1.5px solid var(--line); border-radius:10px;
   padding:10px 12px; height:110px; overflow-y:auto; font-size:12px; line-height:1.6; margin-bottom:10px;
 }
-#log div{color:#c9dbd0;}
-#log div.important{color:#f4d98c; font-weight:700;}
+#log div{color:var(--ink);}
+#log div.important{font-weight:700;}
+#log div.important::before{content:"● ";}
 #actionPanel{
-  background:var(--board); border:1px solid var(--line); border-radius:14px; padding:10px; min-height:56px; margin-bottom:10px;
+  background:var(--paper); border:1.5px solid var(--line); border-radius:10px; padding:10px; min-height:56px; margin-bottom:10px;
 }
-.hint{font-size:12px; color:#9fb3a8;}
+.hint{font-size:12px; color:var(--sub);}
 .btn-row{display:flex; flex-wrap:wrap; gap:6px;}
 button{
-  font-family:inherit; font-size:12.5px; border:none; border-radius:9px; padding:8px 12px;
-  background:#2c8a5f; color:#fff; cursor:pointer; font-weight:700;
+  font-family:inherit; font-size:12.5px; border:1.5px solid var(--ink); border-radius:8px; padding:8px 12px;
+  background:var(--paper); color:var(--ink); cursor:pointer; font-weight:700;
 }
-button.secondary{background:#3d5a4e;}
-button.move{background:var(--back); color:#3a2a06;}
-button.end{background:var(--danger);}
+button.secondary{background:var(--paper); color:var(--ink);}
+button.move{border-style:dashed;}
+button.end{background:var(--ink); color:var(--paper);}
 button.wide{width:100%; margin-top:6px;}
-button:disabled{opacity:0.4; cursor:default;}
+button:disabled{opacity:0.35; cursor:default;}
 #endTurnWrap{display:flex; gap:8px;}
 #banner{
-  display:none; text-align:center; padding:14px; border-radius:14px; margin-bottom:10px;
-  font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px;
+  display:none; text-align:center; padding:14px; border-radius:10px; margin-bottom:10px; border:1.5px solid var(--ink);
+  font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px; background:var(--paper); color:var(--ink);
 }
-#banner.win{background:#2c8a5f; display:block;}
-#banner.lose{background:var(--danger); display:block;}
+#banner.win, #banner.lose{display:block;}
 </style>
 </head>
 <body>
@@ -118,29 +131,32 @@ button:disabled{opacity:0.4; cursor:default;}
 
 <script>
 const STATUS_LABEL = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
+const ELEMENT_META = {
+  '炎':{icon:'🔥'}, '氷':{icon:'❄️'}, '毒':{icon:'☠️'}, '雷':{icon:'⚡'}, '無':{icon:'⚪'}
+};
 
 const CARD_DB = {
-  karai: {name:'激辛くん', elem:'炎', hp:35,
+  karai: {name:'激辛くん', elem:'炎', rarity:'N', art:'🌶️', hp:35,
     frontNormal:{name:'唐辛子パンチ', cost:1, power:16},
     frontSpecial:{name:'爆速フレイバー', cost:1, power:10, status:{type:'burn', chance:0.2}},
     back:{name:'辛味オーラ', cost:1, power:7},
     kingDesc:'猛暑の意地:前衛2枚生存中は被ダメ-10%'},
-  kaki: {name:'かき氷ちゃん', elem:'氷', hp:40,
+  kaki: {name:'かき氷ちゃん', elem:'氷', rarity:'N', art:'🍧', hp:40,
     frontNormal:{name:'シャリシャリアタック', cost:1, power:14},
     frontSpecial:{name:'フリーズタッチ', cost:1, power:8, status:{type:'freeze', chance:0.1}},
     back:{name:'冷気ミスト', cost:1, power:6},
     kingDesc:'クールダウン:ターン開始時にHP+3'},
-  natto: {name:'ねばねば納豆', elem:'毒', hp:38,
+  natto: {name:'ねばねば納豆', elem:'毒', rarity:'N', art:'🫘', hp:38,
     frontNormal:{name:'粘着シュート', cost:1, power:13},
     frontSpecial:{name:'発酵ニードル', cost:1, power:9, status:{type:'poison', chance:1.0}},
     back:{name:'発酵ガス', cost:1, power:5, status:{type:'poison', chance:0.3}},
     kingDesc:'発酵パワー:相手が状態異常なら追加ダメ+3'},
-  soda: {name:'シュワシュワソーダ', elem:'雷', hp:32,
+  soda: {name:'シュワシュワソーダ', elem:'雷', rarity:'N', art:'🥤', hp:32,
     frontNormal:{name:'炭酸弾け', cost:1, power:18},
     frontSpecial:{name:'スパークタッチ', cost:1, power:10, status:{type:'paralyze', chance:0.25}},
     back:{name:'気泡はじき', cost:1, power:5},
     kingDesc:'怒りの泡立ち:味方が倒れるたび攻撃力+10%'},
-  onigiri: {name:'しろいおにぎり', elem:'無', hp:45,
+  onigiri: {name:'しろいおにぎり', elem:'無', rarity:'N', art:'🍙', hp:45,
     frontNormal:{name:'まんまるタックル', cost:1, power:15},
     frontSpecial:{name:'ふりかけ散らし', cost:1, power:9, drainSP:1},
     back:{name:'のり巻きシールド', cost:1, power:0, friendly:true, shield:1},
@@ -149,7 +165,7 @@ const CARD_DB = {
 
 function createInstance(tplId){
   const t = CARD_DB[tplId];
-  return {tplId, name:t.name, elem:t.elem, hp:t.hp, maxHp:t.hp,
+  return {tplId, name:t.name, elem:t.elem, rarity:t.rarity, art:t.art, hp:t.hp, maxHp:t.hp,
     status:null, statusTurns:0, shield:0, alive:true,
     frontNormal:t.frontNormal, frontSpecial:t.frontSpecial, back:t.back, kingDesc:t.kingDesc};
 }
@@ -178,6 +194,7 @@ function newGame(){
 function log(msg, important){ state.log.push({msg, important:!!important}); }
 
 function statusLabel(t){ return STATUS_LABEL[t] || t; }
+function kingSkillName(card){ return card.kingDesc.split(':')[0]; }
 
 function aliveSlots(teamKey, filterFn){
   const s = teams[teamKey].slots;
@@ -398,18 +415,17 @@ function teamSpHtml(teamKey){
   const team = teams[teamKey];
   const dots = Array.from({length:team.spCap}).map((_,i)=>`<div class="sp-dot ${i<team.sp?'filled':''}"></div>`).join('');
   const label = teamKey==='player' ? 'あなたの共通SP' : '敵の共通SP';
-  return `<span>${label}</span><div class="sp-dots teamsp-dots">${dots}</div>`;
+  return `<span>${label}</span><div class="teamsp-dots">${dots}</div>`;
 }
 
 function cardTile(teamKey, slotKey, opts){
   const c = teams[teamKey].slots[slotKey];
-  const role = roleOf(slotKey);
-  const roleLabel = role==='front' ? '前衛' : role==='king' ? '王' : '後衛';
   if(!c){
     return `<div class="card-tile empty">(空き)</div>`;
   }
   let classes = 'card-tile';
   if(!c.alive) classes += ' dead';
+  const role = roleOf(slotKey);
   const isOwnClickable = teamKey==='player' && state.turn==='player' && !state.over && role!=='king' && c.alive
     && !state.pendingAction && !state.moveMode;
   const isTarget = (state.pendingAction && (
@@ -420,6 +436,7 @@ function cardTile(teamKey, slotKey, opts){
 
   if(isOwnClickable || isMoveDest) classes += ' clickable';
   if(isTarget) classes += ' targetable';
+  if(isMoveDest) classes += ' movedest';
   if(state.selected===slotKey && teamKey==='player') classes += ' selected';
 
   let onclick = '';
@@ -427,15 +444,33 @@ function cardTile(teamKey, slotKey, opts){
   else if(isMoveDest) onclick = `onclick="chooseMoveDest('${slotKey}')"`;
   else if(isOwnClickable) onclick = `onclick="selectCard('${teamKey}','${slotKey}')"`;
 
+  const elemIcon = (ELEMENT_META[c.elem] || {}).icon || c.elem;
   const hpPct = Math.round((c.hp/c.maxHp)*100);
-  const statusHtml = c.status ? `<span class="status-badge status-${c.status}">${statusLabel(c.status)}</span>` : (c.shield>0 ? `<span class="status-badge" style="background:#dcecf7;color:#2a6ea0;">盾${c.shield}</span>` : '');
+  const statusHtml = c.status ? `<span class="status-badge status-${c.status}">${statusLabel(c.status)}</span>` : '';
+  const shieldHtml = c.shield>0 ? `<span class="status-badge">盾${c.shield}</span>` : '';
 
   return `<div class="${classes}" ${onclick}>
-    <span class="role-tag role-${role}">${roleLabel}</span>
-    <div class="card-name">${c.name}</div>
-    <div class="hpbar"><div class="hpfill" style="width:${hpPct}%"></div></div>
-    <div class="hptext">${c.hp}/${c.maxHp}</div>
-    ${statusHtml}
+    <div class="card-head">
+      <span class="elem-badge" title="${c.elem}">${elemIcon}</span>
+      <span class="rarity-badge">${c.rarity}</span>
+    </div>
+    <div class="card-art">${c.art}</div>
+    <div class="card-name-row">
+      <span class="card-name">${c.name}</span>
+      <span class="card-hp">${c.hp}/${c.maxHp}</span>
+    </div>
+    <div class="hpbar-mono"><div class="hpbar-mono-fill" style="width:${hpPct}%"></div></div>
+    <div class="card-skills">
+      <div class="skill-col front-col">
+        <div class="skill-cell"><span class="skill-role">前</span>${c.frontNormal.name}</div>
+        <div class="skill-cell"><span class="skill-role">特</span>${c.frontSpecial.name}</div>
+      </div>
+      <div class="skill-col back-col">
+        <div class="skill-cell"><span class="skill-role">後</span>${c.back.name}</div>
+        <div class="skill-cell"><span class="skill-role">王</span>${kingSkillName(c)}</div>
+      </div>
+    </div>
+    <div class="card-status">${statusHtml}${shieldHtml}</div>
   </div>`;
 }
 
@@ -455,14 +490,14 @@ function render(){
   const endBtn = document.getElementById('endTurnBtn');
   endBtn.disabled = state.over || state.turn!=='player';
 
+  const banner = document.getElementById('banner');
   if(state.over){
-    const b = document.getElementById('banner');
-    b.className = state.winner==='player' ? 'win' : 'lose';
-    b.textContent = state.winner==='player' ? 'あなたの勝利!' : '敗北…';
+    banner.className = state.winner==='player' ? 'win' : 'lose';
+    banner.textContent = state.winner==='player' ? '🏆 あなたの勝利!' : '💀 敗北…';
     panel.innerHTML = `<div class="hint">王が倒れて決着。最初からやり直すボタンでリトライできます。</div>`;
     return;
   }
-  document.getElementById('banner').className = '';
+  banner.className = '';
 
   if(state.turn!=='player'){
     panel.innerHTML = `<div class="hint">敵のターン中…</div>`;
