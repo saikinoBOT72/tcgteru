@@ -32,6 +32,7 @@ body{
 
 .board{flex:1 0 auto; display:flex; flex-direction:column; gap:var(--gap); align-items:center; justify-content:center;}
 .teamsp{flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; height:14px;}
+.turn-count{color:var(--sub); font-weight:700; margin-left:3px;}
 .teamsp-value{display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:14px; border:1.5px solid var(--ink); border-radius:4px; padding:0 4px; font-weight:900; font-size:10px;}
 .row{flex:0 0 auto; display:flex; gap:var(--gap); justify-content:center;}
 
@@ -61,7 +62,7 @@ button:disabled{opacity:0.3; cursor:default;}
 .card-tile.dead{filter:grayscale(1) contrast(.85); opacity:.4;}
 .card-tile.clickable{cursor:pointer;}
 
-/* 状態表示は擬似要素/オーバーレイのみ = カード本体の見た目は不変 */
+/* 状態表示はオーバーレイのみ = カード本体の見た目は不変 */
 .card-tile.targetable::after,
 .card-tile.movedest::after,
 .card-tile.movesrc::after{
@@ -72,7 +73,7 @@ button:disabled{opacity:0.3; cursor:default;}
 .card-tile.movesrc::after{box-shadow:inset 0 0 0 3px var(--ink);}
 @keyframes pulseTarget{0%,100%{opacity:1;} 50%{opacity:.35;}}
 
-/* --- 上部:属性コスト丸 + ネームバナー + レア --- */
+.c-accent{flex:0 0 auto; height:.28em;}
 .c-head{
   flex:0 0 auto; height:1.95em; display:flex; align-items:center; gap:.25em; padding:0 .3em;
   border-bottom:1px solid var(--ink); position:relative;
@@ -87,19 +88,17 @@ button:disabled{opacity:0.3; cursor:default;}
   font-size:.95em; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.02em;
 }
 .c-rarity{
-  flex:0 0 auto; font-size:.72em; font-weight:900; border:1px solid var(--ink); border-radius:.25em;
-  padding:0 .28em; line-height:1.35;
+  flex:0 0 auto; font-size:.72em; font-weight:900; border:1.5px solid var(--ink); border-radius:.25em;
+  padding:0 .28em; line-height:1.3;
 }
 
-/* --- アート窓 --- */
 .c-art{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; border-bottom:1px solid var(--ink);}
 .c-art svg.art{position:absolute; inset:0; width:100%; height:100%;}
-.c-art::after{ /* 箔っぽい斜めの光沢 */
+.c-art::after{
   content:''; position:absolute; inset:0; pointer-events:none;
   background:linear-gradient(115deg, rgba(255,255,255,0) 43%, rgba(255,255,255,.34) 50%, rgba(255,255,255,0) 57%);
 }
 
-/* --- 役割 / 移動 / HP --- */
 .c-stat{flex:0 0 auto; height:1.35em; display:flex; align-items:center; gap:.22em; padding:0 .3em;}
 .c-role{font-size:.68em; font-weight:900; border:1px solid var(--ink); border-radius:.25em; padding:0 .3em; line-height:1.4; flex:0 0 auto;}
 .c-role.king{background:var(--ink); color:var(--paper);}
@@ -112,7 +111,6 @@ button:disabled{opacity:0.3; cursor:default;}
 .c-hpbar{flex:0 0 auto; height:.32em; margin:0 .3em .12em; border:1px solid var(--ink); border-radius:.2em; overflow:hidden; background:var(--paper);}
 .c-hpbar i{display:block; height:100%; background:var(--ink);}
 
-/* --- スキルテキストボックス:常に4行 --- */
 .c-skills{flex:0 0 auto; border-top:1.5px solid var(--ink); background:#fcfbf7; padding-bottom:.18em;}
 .sk{
   height:1.72em; display:flex; align-items:center; gap:.25em; padding:0 .28em;
@@ -132,10 +130,10 @@ button:disabled{opacity:0.3; cursor:default;}
 .sk.usable::before{content:''; position:absolute; left:0; top:0; bottom:0; width:.22em; background:var(--ok);}
 .sk.usable:active{background:#e9f5ee;}
 
-/* --- 状態異常バッジ --- */
-.c-status{position:absolute; top:2.15em; left:.2em; display:flex; flex-direction:column; gap:.12em; z-index:8;}
+.c-status{position:absolute; top:2.35em; left:.2em; display:flex; flex-direction:column; gap:.12em; z-index:8;}
 .st{font-size:.7em; font-weight:900; padding:0 .3em; border-radius:.25em; border:1px solid var(--ink); background:var(--paper); line-height:1.4;}
 .st.burn{color:var(--danger);} .st.poison{color:#5c3a99;} .st.freeze{color:var(--block);} .st.paralyze{color:#8a6f0c;}
+.st.up{color:var(--ok);} .st.down{color:var(--danger);}
 
 /* ================= FX LAYER ================= */
 #fxLayer{position:fixed; inset:0; pointer-events:none; z-index:60; overflow:hidden;}
@@ -144,12 +142,19 @@ button:disabled{opacity:0.3; cursor:default;}
   font-weight:700; font-size:26px; white-space:nowrap;
   -webkit-text-stroke:5px #fff; paint-order:stroke fill; letter-spacing:-.02em;
 }
-.fx-num.dmg{color:var(--danger);} .fx-num.block{color:var(--block);}
-.fx-num.buff{color:var(--ok);} .fx-num.neutral{color:var(--ink); font-size:15px;}
+.fx-num.damage{color:var(--danger);} .fx-num.block{color:var(--block);}
+.fx-num.buff{color:var(--ok); font-size:17px;} .fx-num.neutral{color:var(--ink); font-size:15px;}
 .fx-tag{
   position:absolute; transform:translate(-50%,-50%); background:var(--ink); color:var(--paper);
   font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; white-space:nowrap;
 }
+.fx-aff{
+  position:absolute; transform:translate(-50%,-50%); font-family:"Zen Maru Gothic",sans-serif;
+  font-weight:700; font-size:13px; padding:1px 6px; border-radius:4px; white-space:nowrap; border:2px solid var(--ink);
+}
+.fx-aff.weak{background:#ffe14d; color:#7a1f16;}
+.fx-aff.resist{background:#dde6ee; color:#2a4a66;}
+.fx-aff.null{background:#333; color:#fff;}
 .fx-proj{position:absolute; transform:translate(-50%,-50%); width:16px; height:16px;}
 .fx-ringbox{position:absolute; transform:translate(-50%,-50%); border:3px solid #000; border-radius:.6em; box-sizing:border-box;}
 .fx-burst{position:absolute; transform:translate(-50%,-50%); width:74px; height:74px;}
@@ -162,98 +167,7 @@ button:disabled{opacity:0.3; cursor:default;}
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute">
-<defs>
-  <radialGradient id="bg-karai" cx="50%" cy="42%"><stop offset="0%" stop-color="#fff2ef"/><stop offset="100%" stop-color="#f6c9c2"/></radialGradient>
-  <radialGradient id="bg-kaki" cx="50%" cy="42%"><stop offset="0%" stop-color="#f2fbff"/><stop offset="100%" stop-color="#c3e4f4"/></radialGradient>
-  <radialGradient id="bg-natto" cx="50%" cy="42%"><stop offset="0%" stop-color="#f8f2ff"/><stop offset="100%" stop-color="#d8c6ee"/></radialGradient>
-  <radialGradient id="bg-soda" cx="50%" cy="42%"><stop offset="0%" stop-color="#fffdf0"/><stop offset="100%" stop-color="#f2e0a8"/></radialGradient>
-  <radialGradient id="bg-onigiri" cx="50%" cy="42%"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#dcdcdc"/></radialGradient>
-
-  <symbol id="art-karai" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">
-    <rect width="100" height="50" fill="url(#bg-karai)"/>
-    <g stroke="#e8a79f" stroke-width="2.2" opacity=".5" fill="none">
-      <path d="M5 6 L17 17 M95 6 L83 17 M5 44 L17 33 M95 44 L83 33"/>
-    </g>
-    <g transform="translate(50 25) scale(.82)">
-      <path d="M-2 -25 Q4 -32 9 -26 L1 -16 Z" fill="#4d9a4d" stroke="#2e6b2e" stroke-width="1.8"/>
-      <path d="M1 -21 C18 -20 24 -5 15 8 C9 18 -6 21 -13 13 C-19 5 -14 -8 -5 -14 C-11 -17 -10 -22 1 -21 Z" fill="#e2483f" stroke="#8f241d" stroke-width="2.4"/>
-      <path d="M-6 -12 C-11 -6 -12 2 -8 8" fill="none" stroke="#ff8f83" stroke-width="2.6" stroke-linecap="round" opacity=".75"/>
-      <circle cx="-3" cy="-2" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="-5" r="2.9" fill="#1a1a1a"/>
-      <circle cx="-4" cy="-3" r="1" fill="#fff"/><circle cx="5" cy="-6" r="1" fill="#fff"/>
-      <path d="M-4 5 Q2 10 8 4" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
-    </g>
-  </symbol>
-
-  <symbol id="art-kaki" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">
-    <rect width="100" height="50" fill="url(#bg-kaki)"/>
-    <g stroke="#9fd2e8" stroke-width="2" opacity=".55" fill="none">
-      <path d="M10 9 v7 M6.5 12.5 h7 M90 36 v7 M86.5 39.5 h7 M87 10 v5 M84.5 12.5 h5"/>
-    </g>
-    <g transform="translate(50 26) scale(.86)">
-      <path d="M-11 18 L11 18 L7 -6 Q0 -11 -7 -6 Z" fill="#eaf6fb" stroke="#3f83ad" stroke-width="2.4"/>
-      <ellipse cx="0" cy="-10" rx="16" ry="11" fill="#fff" stroke="#3f83ad" stroke-width="2.4"/>
-      <path d="M-11 -10 Q0 -22 11 -10" fill="none" stroke="#c9e8f6" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="0" cy="-21" r="3.6" fill="#d84b4b" stroke="#9c2820" stroke-width="1.5"/>
-      <circle cx="-5" cy="0" r="2.5" fill="#1a1a1a"/><circle cx="5" cy="0" r="2.5" fill="#1a1a1a"/>
-      <circle cx="-5.8" cy="-.8" r=".9" fill="#fff"/><circle cx="4.2" cy="-.8" r=".9" fill="#fff"/>
-      <path d="M-5 6 Q0 10 5 6" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-      <circle cx="-13" cy="3" r="2.5" fill="#f5b8c4" opacity=".8"/><circle cx="13" cy="3" r="2.5" fill="#f5b8c4" opacity=".8"/>
-    </g>
-  </symbol>
-
-  <symbol id="art-natto" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">
-    <rect width="100" height="50" fill="url(#bg-natto)"/>
-    <g stroke="#c0a6dd" stroke-width="1.8" opacity=".55" fill="none">
-      <path d="M7 14 q7 6 0 13 M93 14 q-7 6 0 13"/>
-    </g>
-    <g transform="translate(50 25) scale(1.02)">
-      <g stroke="#efe0b8" stroke-width="1.6" opacity=".9" fill="none">
-        <path d="M-16 4 q4 -8 2 12 M16 4 q-4 -8 -2 12 M0 12 q3 -6 -1 10"/>
-      </g>
-      <ellipse cx="-10" cy="3" rx="10" ry="12" fill="#c9a15a" stroke="#6d5227" stroke-width="2.1"/>
-      <ellipse cx="10" cy="3" rx="10" ry="12" fill="#d9b16a" stroke="#6d5227" stroke-width="2.1"/>
-      <ellipse cx="0" cy="-7" rx="11" ry="13" fill="#e6c37f" stroke="#6d5227" stroke-width="2.1"/>
-      <circle cx="-4" cy="-9" r="2.5" fill="#1a1a1a"/><circle cx="4" cy="-9" r="2.5" fill="#1a1a1a"/>
-      <circle cx="-4.8" cy="-9.8" r=".9" fill="#fff"/><circle cx="3.2" cy="-9.8" r=".9" fill="#fff"/>
-      <path d="M-4 -2 Q0 1 4 -2" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-    </g>
-  </symbol>
-
-  <symbol id="art-soda" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">
-    <rect width="100" height="50" fill="url(#bg-soda)"/>
-    <g fill="#fff" opacity=".7">
-      <circle cx="12" cy="12" r="3"/><circle cx="88" cy="16" r="2.4"/><circle cx="16" cy="38" r="2.2"/><circle cx="86" cy="37" r="3.2"/>
-    </g>
-    <g transform="translate(50 26) scale(.8)">
-      <path d="M-12 -14 L12 -14 L8 20 L-8 20 Z" fill="#fdf0b0" stroke="#a8851a" stroke-width="2.4"/>
-      <rect x="-2.5" y="-29" width="5" height="17" rx="2.5" fill="#fff" stroke="#a8851a" stroke-width="1.6"/>
-      <g fill="#fff" stroke="#a8851a" stroke-width="1.1">
-        <circle cx="-5" cy="-6" r="2.3"/><circle cx="5" cy="-10" r="1.8"/><circle cx="2" cy="1" r="2.5"/>
-      </g>
-      <circle cx="-5" cy="9" r="2.4" fill="#1a1a1a"/><circle cx="5" cy="9" r="2.4" fill="#1a1a1a"/>
-      <circle cx="-5.8" cy="8.2" r=".9" fill="#fff"/><circle cx="4.2" cy="8.2" r=".9" fill="#fff"/>
-      <path d="M-5 14 Q0 17 5 14" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-    </g>
-  </symbol>
-
-  <symbol id="art-onigiri" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">
-    <rect width="100" height="50" fill="url(#bg-onigiri)"/>
-    <g stroke="#c4c4c4" stroke-width="2" opacity=".65" fill="none">
-      <path d="M8 40 h16 M76 40 h16"/>
-    </g>
-    <g transform="translate(50 26) scale(.94)">
-      <clipPath id="clip-oni"><path d="M0 -22 L19 14 Q21 19 16 19 L-16 19 Q-21 19 -19 14 Z"/></clipPath>
-      <path d="M0 -22 L19 14 Q21 19 16 19 L-16 19 Q-21 19 -19 14 Z" fill="#fff" stroke="#333" stroke-width="2.4"/>
-      <g clip-path="url(#clip-oni)"><rect x="-24" y="6" width="48" height="16" fill="#262626"/></g>
-      <circle cx="-5" cy="-2" r="2.5" fill="#1a1a1a"/><circle cx="5" cy="-2" r="2.5" fill="#1a1a1a"/>
-      <circle cx="-5.8" cy="-2.8" r=".9" fill="#fff"/><circle cx="4.2" cy="-2.8" r=".9" fill="#fff"/>
-      <path d="M-4 4 Q0 7 4 4" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-      <circle cx="-12" cy="2" r="2.3" fill="#f3b9b9" opacity=".85"/><circle cx="12" cy="2" r="2.3" fill="#f3b9b9" opacity=".85"/>
-    </g>
-  </symbol>
-</defs>
-</svg>
+<svg id="artDefs" width="0" height="0" style="position:absolute"></svg>
 
 <div id="topbar">
   <h1>食卓バトル β</h1>
@@ -281,518 +195,9 @@ button:disabled{opacity:0.3; cursor:default;}
 <div id="fxLayer"></div>
 <div id="ovlRoot"></div>
 
-<script>
-const STATUS_LABEL={burn:'やけど',poison:'毒',freeze:'凍結',paralyze:'麻痺'};
-const ELEM={
-  '炎':{icon:'🔥',accent:'#e2483f'},
-  '氷':{icon:'❄️',accent:'#4f96c2'},
-  '毒':{icon:'☠️',accent:'#8e5cc9'},
-  '雷':{icon:'⚡',accent:'#c9a227'},
-  '無':{icon:'⚪',accent:'#8d8d8d'}
-};
-const MOVE_COST=1;
-
-const CARD_DB={
-  karai:{name:'激辛くん',elem:'炎',rarity:'N',hp:35,
-    frontNormal:{name:'唐辛子パンチ',cost:1,power:16},
-    frontSpecial:{name:'爆速フレイバー',cost:1,power:10,status:{type:'burn',chance:.2}},
-    back:{name:'辛味オーラ',cost:1,power:7},
-    king:{name:'猛暑の意地',desc:'前衛2枚生存で被ダメ-10%'}},
-  kaki:{name:'かき氷ちゃん',elem:'氷',rarity:'N',hp:40,
-    frontNormal:{name:'シャリシャリ',cost:1,power:14},
-    frontSpecial:{name:'フリーズタッチ',cost:1,power:8,status:{type:'freeze',chance:.1}},
-    back:{name:'冷気ミスト',cost:1,power:6},
-    king:{name:'クールダウン',desc:'ターン開始時HP+3'}},
-  natto:{name:'ねばねば納豆',elem:'毒',rarity:'N',hp:38,
-    frontNormal:{name:'粘着シュート',cost:1,power:13},
-    frontSpecial:{name:'発酵ニードル',cost:1,power:9,status:{type:'poison',chance:1}},
-    back:{name:'発酵ガス',cost:1,power:5,status:{type:'poison',chance:.3}},
-    king:{name:'発酵パワー',desc:'状態異常の敵に+3'}},
-  soda:{name:'シュワソーダ',elem:'雷',rarity:'N',hp:32,
-    frontNormal:{name:'炭酸弾け',cost:1,power:18},
-    frontSpecial:{name:'スパークタッチ',cost:1,power:10,status:{type:'paralyze',chance:.25}},
-    back:{name:'気泡はじき',cost:1,power:5},
-    king:{name:'怒りの泡立ち',desc:'味方が倒れる毎+10%'}},
-  onigiri:{name:'しろいおにぎり',elem:'無',rarity:'N',hp:45,
-    frontNormal:{name:'まんまるタックル',cost:1,power:15},
-    frontSpecial:{name:'ふりかけ散らし',cost:1,power:9,drainSP:1},
-    back:{name:'のり巻きシールド',cost:1,power:0,friendly:true,shield:1},
-    king:{name:'安定の白米',desc:'後衛2枚生存で毎T HP+5'}}
-};
-
-function createInstance(id){
-  const t=CARD_DB[id];
-  return {tplId:id,name:t.name,elem:t.elem,rarity:t.rarity,hp:t.hp,maxHp:t.hp,
-    status:null,statusTurns:0,shield:0,alive:true,
-    frontNormal:t.frontNormal,frontSpecial:t.frontSpecial,back:t.back,king:t.king};
-}
-
-let teams,state;
-
-function newGame(){
-  teams={
-    player:{fallenCount:0,sp:0,slots:{
-      frontL:createInstance('karai'),frontR:createInstance('soda'),
-      backL:createInstance('kaki'),backR:createInstance('natto'),
-      king:createInstance('onigiri')}},
-    enemy:{fallenCount:0,sp:0,slots:{
-      frontL:createInstance('natto'),frontR:createInstance('onigiri'),
-      backL:createInstance('karai'),backR:createInstance('soda'),
-      king:createInstance('kaki')}}
-  };
-  state={turn:'player',over:false,winner:null,pendingAction:null,moveMode:false,moveSource:null};
-  document.getElementById('fxLayer').innerHTML='';
-  startTurn('player');
-  render();
-}
-
-function statusLabel(t){return STATUS_LABEL[t]||t;}
-
-function skillDetail(s){
-  const p=['SP'+s.cost];
-  if(s.power>0)p.push('威'+s.power);
-  if(s.status)p.push(statusLabel(s.status.type)+Math.round(s.status.chance*100)+'%');
-  if(s.drainSP)p.push('SP-'+s.drainSP);
-  if(s.shield)p.push('盾+'+s.shield);
-  return p.join(' ');
-}
-
-function aliveSlots(tk,fn){
-  const s=teams[tk].slots;
-  return Object.keys(s).filter(k=>s[k]&&s[k].alive&&(!fn||fn(k,s[k])));
-}
-
-function applyKingDamageMods(atk,def,base,target){
-  let d=base;
-  const aK=teams[atk].slots.king,dK=teams[def].slots.king;
-  if(aK&&aK.alive){
-    if(aK.tplId==='soda')d*=(1+.1*teams[atk].fallenCount);
-    if(aK.tplId==='natto'&&target.status)d+=3;
-  }
-  if(dK&&dK.alive&&dK.tplId==='karai'){
-    const f=['frontL','frontR'].filter(k=>teams[def].slots[k]&&teams[def].slots[k].alive).length;
-    if(f>=2)d*=.9;
-  }
-  return Math.max(0,Math.round(d));
-}
-
-function startTurn(tk){
-  const team=teams[tk];
-  team.sp+=1;
-  Object.keys(team.slots).forEach(k=>{
-    const c=team.slots[k];
-    if(!c||!c.alive)return;
-    if(c.status==='burn'||c.status==='poison'){
-      const d=c.status==='burn'?2:3;
-      c.hp=Math.max(0,c.hp-d);
-      queueFx({target:{team:tk,slot:k},targetText:'-'+d,targetKind:'damage',noProjectile:true});
-      c.statusTurns--;
-      if(c.statusTurns<=0)c.status=null;
-      if(c.hp<=0)killCard(tk,k);
-    }
-  });
-  if(state&&state.over)return;
-  const king=team.slots.king;
-  if(king&&king.alive){
-    if(king.tplId==='kaki'&&king.hp<king.maxHp){
-      const before=king.hp; king.hp=Math.min(king.maxHp,king.hp+3);
-      queueFx({target:{team:tk,slot:'king'},targetText:'+'+(king.hp-before),targetKind:'buff',noProjectile:true});
-    }
-    if(king.tplId==='onigiri'){
-      const b=['backL','backR'].filter(k=>team.slots[k]&&team.slots[k].alive).length;
-      if(b>=2&&king.hp<king.maxHp){
-        const before=king.hp; king.hp=Math.min(king.maxHp,king.hp+5);
-        queueFx({target:{team:tk,slot:'king'},targetText:'+'+(king.hp-before),targetKind:'buff',noProjectile:true});
-      }
-    }
-  }
-}
-
-function killCard(tk,sk){
-  const team=teams[tk],c=team.slots[sk];
-  if(!c||!c.alive)return;
-  c.alive=false; team.fallenCount++;
-  queueFx({target:{team:tk,slot:sk},defeat:true});
-  if(sk==='king')endGame(tk==='player'?'enemy':'player');
-}
-
-function endGame(w){state.over=true;state.winner=w;}
-function roleOf(k){return k.startsWith('front')?'front':(k==='king'?'king':'back');}
-function roleLabel(k){return k==='front'?'前衛':k==='king'?'王':'後衛';}
-
-function validTargets(atk,slotKey,skill){
-  const opp=atk==='player'?'enemy':'player';
-  if(skill.friendly)return {teamKey:atk,slots:aliveSlots(atk)};
-  if(roleOf(slotKey)==='front'){
-    const f=aliveSlots(opp,k=>roleOf(k)==='front');
-    if(f.length>0)return {teamKey:opp,slots:f};
-    return {teamKey:opp,slots:aliveSlots(opp,k=>roleOf(k)!=='front')};
-  }
-  return {teamKey:opp,slots:aliveSlots(opp)};
-}
-
-function executeSkill(atk,slotKey,skill,tTeam,tSlot){
-  const team=teams[atk],card=team.slots[slotKey];
-  if(!card||!card.alive||team.sp<skill.cost)return;
-
-  if(card.status==='freeze'){
-    team.sp-=skill.cost; card.status=null;
-    queueFx({attacker:{team:atk,slot:slotKey},attackerTag:'凍結で動けない'});
-    clearSelection(); render(); return;
-  }
-  team.sp-=skill.cost;
-  let fizzle=false;
-  if(card.status==='paralyze'){
-    card.status=null;
-    if(Math.random()<.5){fizzle=true;queueFx({attacker:{team:atk,slot:slotKey},attackerTag:'しびれて失敗'});}
-  }
-  if(!fizzle){
-    const tTeamObj=teams[tTeam],target=tTeamObj.slots[tSlot];
-    const fx={attacker:{team:atk,slot:slotKey},target:{team:tTeam,slot:tSlot},skillName:skill.name,elem:card.elem};
-    if(skill.friendly&&skill.shield){
-      target.shield+=skill.shield;
-      fx.targetText='盾+'+skill.shield; fx.targetKind='buff';
-      queueFx(fx);
-    }else if(target){
-      if(target.shield>0){
-        target.shield--;
-        fx.targetText='GUARD'; fx.targetKind='block';
-        queueFx(fx);
-      }else if(skill.power>0){
-        const dmg=applyKingDamageMods(atk,tTeam,skill.power,target);
-        target.hp=Math.max(0,target.hp-dmg);
-        fx.targetText='-'+dmg; fx.targetKind='damage';
-        if(skill.drainSP)tTeamObj.sp=Math.max(0,tTeamObj.sp-skill.drainSP);
-        if(skill.status&&target.alive&&Math.random()<skill.status.chance){
-          target.status=skill.status.type;
-          target.statusTurns=skill.status.type==='burn'?2:skill.status.type==='poison'?3:1;
-          fx.statusText=statusLabel(skill.status.type)+'!';
-        }
-        queueFx(fx);
-        if(target.hp<=0)killCard(tTeam,tSlot);
-      }
-    }
-  }
-  clearSelection();
-  render();
-}
-
-function clearSelection(){state.pendingAction=null;state.moveMode=false;state.moveSource=null;}
-
-function activateSkill(tk,sk,kind){
-  if(state.over||state.turn!=='player'||tk!=='player')return;
-  if(state.pendingAction||state.moveMode)return;
-  const c=teams.player.slots[sk];
-  if(!c||!c.alive)return;
-  const role=roleOf(sk);
-  if(kind==='back'&&role!=='back')return;
-  if((kind==='frontNormal'||kind==='frontSpecial')&&role!=='front')return;
-  const skill=c[kind];
-  if(teams.player.sp<skill.cost)return;
-  state.pendingAction={slotKey:sk,skill};
-  render();
-}
-
-function chooseTarget(tk,sk){
-  if(!state.pendingAction)return;
-  const {slotKey,skill}=state.pendingAction;
-  const tt=skill.friendly?'player':'enemy';
-  if(tk!==tt)return;
-  if(!validTargets('player',slotKey,skill).slots.includes(sk))return;
-  executeSkill('player',slotKey,skill,tt,sk);
-}
-
-function startMoveSource(tk,sk){
-  if(state.over||state.turn!=='player'||tk!=='player')return;
-  if(state.pendingAction||state.moveMode)return;
-  const c=teams.player.slots[sk];
-  if(!c||!c.alive||roleOf(sk)==='king')return;
-  if(teams.player.sp<MOVE_COST)return;
-  state.moveMode=true; state.moveSource=sk;
-  render();
-}
-
-function chooseMoveDest(sk){
-  if(!state.moveMode)return;
-  if(teams.player.sp<MOVE_COST){clearSelection();render();return;}
-  const src=state.moveSource;
-  if(roleOf(sk)==='king'||roleOf(src)==='king')return;
-  teams.player.sp-=MOVE_COST;
-  const s=teams.player.slots,t=s[src];s[src]=s[sk];s[sk]=t;
-  queueFx({swap:[{team:'player',slot:src},{team:'player',slot:sk}]});
-  clearSelection();
-  render();
-}
-
-function cancelSelection(){clearSelection();render();}
-
-function onEndTurn(){
-  if(state.over||state.turn!=='player')return;
-  clearSelection();
-  state.turn='enemy';
-  startTurn('enemy');
-  render();
-  if(!state.over)setTimeout(aiStep,650);
-}
-
-function aiStep(){
-  if(state.over)return;
-  if(teams.enemy.sp<1){backToPlayer();return;}
-  const actable=aliveSlots('enemy',k=>roleOf(k)!=='king');
-  if(actable.length===0){backToPlayer();return;}
-  const sk=actable[Math.floor(Math.random()*actable.length)];
-  const c=teams.enemy.slots[sk];
-  const skill=roleOf(sk)==='front'?(Math.random()<.4?c.frontSpecial:c.frontNormal):c.back;
-  if(teams.enemy.sp<skill.cost){backToPlayer();return;}
-  const vt=validTargets('enemy',sk,skill);
-  if(vt.slots.length===0){if(!state.over)setTimeout(aiStep,400);return;}
-  const t=vt.slots[Math.floor(Math.random()*vt.slots.length)];
-  executeSkill('enemy',sk,skill,vt.teamKey,t);
-  if(!state.over)setTimeout(aiStep,1000);
-  else render();
-}
-
-function backToPlayer(){state.turn='player';startTurn('player');render();}
-function resetGame(){newGame();}
-
-/* ================= FX ================= */
-let fxQueue=[];
-function queueFx(fx){fxQueue.push(fx);}
-
-function centerOf(team,slot){
-  const el=document.querySelector(`[data-team="${team}"][data-slot="${slot}"]`);
-  if(!el)return null;
-  const r=el.getBoundingClientRect();
-  return {x:r.left+r.width/2,y:r.top+r.height/2,el,r};
-}
-
-function spawn(cls,x,y,html){
-  const d=document.createElement('div');
-  d.className=cls; d.style.left=x+'px'; d.style.top=y+'px';
-  if(html)d.innerHTML=html;
-  document.getElementById('fxLayer').appendChild(d);
-  return d;
-}
-function drop(el,ms){setTimeout(()=>el.remove(),ms);}
-
-function playFx(fx){
-  const a=fx.attacker?centerOf(fx.attacker.team,fx.attacker.slot):null;
-  const t=fx.target?centerOf(fx.target.team,fx.target.slot):null;
-  const accent=(ELEM[fx.elem]||{}).accent||'#000';
-
-  if(fx.swap){
-    fx.swap.forEach(s=>{
-      const p=centerOf(s.team,s.slot); if(!p)return;
-      p.el.animate([{transform:'rotate(0) scale(1)'},{transform:'rotate(-4deg) scale(1.06)'},{transform:'rotate(0) scale(1)'}],{duration:420,easing:'ease-out'});
-    });
-    const p=centerOf(fx.swap[0].team,fx.swap[0].slot);
-    if(p){const tag=spawn('fx-tag',p.x,p.y-p.r.height/2-8,'⇄ 移動');
-      tag.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.8)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)'},{opacity:1},{opacity:0,transform:'translate(-50%,-140%) scale(1)'}],{duration:800,easing:'ease-out'});
-      drop(tag,820);}
-    return;
-  }
-
-  // 攻撃者:技名タグ + 対象へ踏み込むランジ
-  if(a){
-    const tag=spawn('fx-tag',a.x,a.y-a.r.height/2-8,fx.attackerTag||fx.skillName||'');
-    if(tag.textContent){
-      tag.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.75)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)',offset:.2},{opacity:1,offset:.7},{opacity:0}],{duration:900,easing:'ease-out'});
-      drop(tag,920);
-    }else tag.remove();
-
-    if(t){
-      // 攻撃者を属性色のリングで縁取り = 誰が撃ったか一目でわかる
-      const ring=spawn('fx-ringbox',a.x,a.y);
-      ring.style.width=a.r.width+'px'; ring.style.height=a.r.height+'px'; ring.style.borderColor=accent;
-      ring.animate([
-        {opacity:0,transform:'translate(-50%,-50%) scale(1)'},
-        {opacity:1,transform:'translate(-50%,-50%) scale(1.05)',offset:.25},
-        {opacity:1,offset:.6},{opacity:0,transform:'translate(-50%,-50%) scale(1)'}
-      ],{duration:560,easing:'ease-out'});
-      drop(ring,580);
-
-      const dx=t.x-a.x,dy=t.y-a.y,len=Math.hypot(dx,dy)||1;
-      const ux=dx/len*11,uy=dy/len*11;
-      a.el.animate([
-        {transform:'translate(0,0) scale(1)'},
-        {transform:`translate(${-ux*.45}px,${-uy*.45}px) scale(.98)`,offset:.22},
-        {transform:`translate(${ux}px,${uy}px) scale(1.05)`,offset:.5},
-        {transform:'translate(0,0) scale(1)'}
-      ],{duration:520,easing:'cubic-bezier(.34,1.3,.5,1)'});
-    }
-  }
-
-  if(!t)return;
-
-  const impactDelay=(a&&!fx.noProjectile)?230:0;
-
-  // 弾(属性色の菱形)が攻撃者→対象へ飛ぶ
-  if(a&&!fx.noProjectile){
-    const proj=spawn('fx-proj',0,0,
-      `<svg viewBox="0 0 16 16"><path d="M8 0 L16 8 L8 16 L0 8 Z" fill="${accent}" stroke="#000" stroke-width="1.6"/></svg>`);
-    proj.animate([
-      {transform:`translate(${a.x}px,${a.y}px) translate(-50%,-50%) rotate(0deg) scale(.5)`,opacity:0},
-      {transform:`translate(${a.x}px,${a.y}px) translate(-50%,-50%) rotate(60deg) scale(1)`,opacity:1,offset:.18},
-      {transform:`translate(${t.x}px,${t.y}px) translate(-50%,-50%) rotate(300deg) scale(1)`,opacity:1,offset:.92},
-      {transform:`translate(${t.x}px,${t.y}px) translate(-50%,-50%) rotate(340deg) scale(1.6)`,opacity:0}
-    ],{duration:340,easing:'cubic-bezier(.5,0,.7,1)'});
-    drop(proj,360);
-  }
-
-  setTimeout(()=>{
-    const tc=centerOf(fx.target.team,fx.target.slot);
-    if(!tc)return;
-
-    // 着弾バースト
-    if(fx.targetKind==='damage'||fx.targetKind==='block'){
-      const col=fx.targetKind==='block'?'#2a6ea0':'#000';
-      const burst=spawn('fx-burst',tc.x,tc.y,
-        `<svg viewBox="0 0 100 100"><g stroke="${col}" stroke-width="7" stroke-linecap="round">
-         <path d="M50 6 v16 M50 78 v16 M6 50 h16 M78 50 h16 M19 19 l11 11 M70 70 l11 11 M81 19 l-11 11 M30 70 l-11 11"/></g></svg>`);
-      burst.animate([{opacity:1,transform:'translate(-50%,-50%) scale(.35) rotate(0deg)'},{opacity:0,transform:'translate(-50%,-50%) scale(1.25) rotate(35deg)'}],{duration:420,easing:'ease-out'});
-      drop(burst,440);
-    }
-
-    // 被弾シェイク
-    if(fx.targetKind==='damage'){
-      tc.el.animate([
-        {transform:'translate(0,0)'},{transform:'translate(-5px,2px)'},{transform:'translate(5px,-2px)'},
-        {transform:'translate(-4px,-1px)'},{transform:'translate(3px,1px)'},{transform:'translate(0,0)'}
-      ],{duration:300,easing:'ease-out'});
-    }
-
-    // ダメージ/回復数値
-    if(fx.targetText){
-      const n=spawn('fx-num '+(fx.targetKind||'neutral'),tc.x,tc.y-6,fx.targetText);
-      n.animate([
-        {opacity:0,transform:'translate(-50%,-50%) scale(.5)'},
-        {opacity:1,transform:'translate(-50%,-70%) scale(1.35)',offset:.22},
-        {opacity:1,transform:'translate(-50%,-95%) scale(1)',offset:.6},
-        {opacity:0,transform:'translate(-50%,-155%) scale(.95)'}
-      ],{duration:900,easing:'cubic-bezier(.2,.9,.3,1)'});
-      drop(n,920);
-    }
-    if(fx.statusText){
-      const s=spawn('fx-tag',tc.x,tc.y+tc.r.height/2-4,fx.statusText);
-      s.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.8)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)',offset:.25},{opacity:1,offset:.7},{opacity:0,transform:'translate(-50%,-110%)'}],{duration:1000,easing:'ease-out'});
-      drop(s,1020);
-    }
-    if(fx.defeat){
-      const d=spawn('fx-tag',tc.x,tc.y,'K.O.');
-      d.style.fontSize='13px';
-      d.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.6) rotate(-12deg)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.2) rotate(-12deg)',offset:.3},{opacity:1,offset:.75},{opacity:0}],{duration:950,easing:'ease-out'});
-      drop(d,970);
-      tc.el.animate([{opacity:1,transform:'scale(1)'},{opacity:.35,transform:'scale(.9) rotate(3deg)'}],{duration:500,easing:'ease-out'});
-    }
-  },impactDelay);
-}
-
-function flushFx(){
-  if(fxQueue.length===0)return;
-  const q=fxQueue; fxQueue=[];
-  q.forEach((fx,i)=>setTimeout(()=>playFx(fx),i*260));
-}
-
-/* ================= RENDER ================= */
-function spHtml(tk){
-  return `<span>${tk==='player'?'自分SP':'敵SP'}</span><span class="teamsp-value">${teams[tk].sp}</span>`;
-}
-
-function skRow(tk,sk,kind,skill,tag,roleMatch,isKing){
-  if(isKing){
-    return `<div class="sk king"><span class="sk-tag">王</span><span class="sk-body">
-      <span class="sk-name">${skill.name}</span><span class="sk-detail">${skill.desc}</span></span></div>`;
-  }
-  const usable=tk==='player'&&state.turn==='player'&&!state.over&&!state.pendingAction&&!state.moveMode
-    &&roleMatch&&teams.player.sp>=skill.cost&&teams[tk].slots[sk].alive;
-  return `<div class="sk${usable?' usable':''}" ${usable?`onclick="event.stopPropagation();activateSkill('${tk}','${sk}','${kind}')"`:''}>
-    <span class="sk-tag">${tag}</span>
-    <span class="sk-body"><span class="sk-name">${skill.name}</span><span class="sk-detail">${skillDetail(skill)}</span></span>
-    ${usable?'<span class="sk-go">▶</span>':''}
-  </div>`;
-}
-
-function cardTile(tk,sk){
-  const c=teams[tk].slots[sk];
-  if(!c)return '';
-  const role=roleOf(sk);
-  const meta=ELEM[c.elem]||{};
-  let cls='card-tile';
-  if(!c.alive)cls+=' dead';
-
-  const isTarget=state.pendingAction&&(
-      (state.pendingAction.skill.friendly&&tk==='player')||
-      (!state.pendingAction.skill.friendly&&tk==='enemy'))
-    &&validTargets('player',state.pendingAction.slotKey,state.pendingAction.skill).slots.includes(sk)&&c.alive;
-  const isDest=state.moveMode&&tk==='player'&&role!=='king'&&sk!==state.moveSource;
-  const isSrc=state.moveMode&&tk==='player'&&sk===state.moveSource;
-
-  if(isTarget||isDest)cls+=' clickable';
-  if(isTarget)cls+=' targetable';
-  if(isDest)cls+=' movedest';
-  if(isSrc)cls+=' movesrc';
-
-  let onclick='';
-  if(isTarget)onclick=`onclick="chooseTarget('${tk}','${sk}')"`;
-  else if(isDest)onclick=`onclick="chooseMoveDest('${sk}')"`;
-
-  const canMove=tk==='player'&&state.turn==='player'&&!state.over&&role!=='king'&&c.alive
-    &&!state.pendingAction&&!state.moveMode&&teams.player.sp>=MOVE_COST;
-
-  const st=[];
-  if(c.status)st.push(`<span class="st ${c.status}">${statusLabel(c.status)}</span>`);
-  if(c.shield>0)st.push(`<span class="st">盾${c.shield}</span>`);
-
-  return `<div class="${cls}" data-team="${tk}" data-slot="${sk}" ${onclick}>
-    <div class="c-head" style="background:linear-gradient(180deg,${meta.accent}22,${meta.accent}44)">
-      <span class="c-elem" style="background:${meta.accent}">${meta.icon}</span>
-      <span class="c-name">${c.name}</span>
-      <span class="c-rarity">${c.rarity}</span>
-    </div>
-    <div class="c-art"><svg class="art"><use href="#art-${c.tplId}"/></svg></div>
-    <div class="c-stat">
-      <span class="c-role${role==='king'?' king':''}">${roleLabel(role)}</span>
-      ${role!=='king'?`<span class="c-move${canMove?' usable':''}" ${canMove?`onclick="event.stopPropagation();startMoveSource('${tk}','${sk}')"`:''}>⇄</span>`:''}
-      <span class="c-hp">${c.hp}/${c.maxHp}</span>
-    </div>
-    <div class="c-hpbar"><i style="width:${Math.round(c.hp/c.maxHp*100)}%"></i></div>
-    <div class="c-skills">
-      ${skRow(tk,sk,'frontNormal',c.frontNormal,'前',role==='front')}
-      ${skRow(tk,sk,'frontSpecial',c.frontSpecial,'特',role==='front')}
-      ${skRow(tk,sk,'back',c.back,'後',role==='back')}
-      ${skRow(tk,sk,null,c.king,'王',false,true)}
-    </div>
-    ${st.length?`<div class="c-status">${st.join('')}</div>`:''}
-  </div>`;
-}
-
-function centerBarHtml(){
-  if(state.over)return '';
-  if(state.turn!=='player')return '<span>敵のターン</span>';
-  if(state.moveMode)return `<span>入れ替え先をタップ (SP${MOVE_COST})</span><button class="cancel-chip" onclick="cancelSelection()">✕</button>`;
-  if(state.pendingAction)return `<span>「${state.pendingAction.skill.name}」の対象をタップ</span><button class="cancel-chip" onclick="cancelSelection()">✕</button>`;
-  return '<span class="midline"></span>';
-}
-
-function render(){
-  document.getElementById('enemySP').innerHTML=spHtml('enemy');
-  document.getElementById('enemyBack').innerHTML=['backL','king','backR'].map(k=>cardTile('enemy',k)).join('');
-  document.getElementById('enemyFront').innerHTML=['frontL','frontR'].map(k=>cardTile('enemy',k)).join('');
-  document.getElementById('playerFront').innerHTML=['frontL','frontR'].map(k=>cardTile('player',k)).join('');
-  document.getElementById('playerBack').innerHTML=['backL','king','backR'].map(k=>cardTile('player',k)).join('');
-  document.getElementById('playerSP').innerHTML=spHtml('player');
-  document.getElementById('centerBar').innerHTML=centerBarHtml();
-
-  document.getElementById('endTurnBtn').disabled=state.over||state.turn!=='player';
-
-  document.getElementById('ovlRoot').innerHTML = state.over
-    ? `<div class="ovl"><div class="ovl-card"><h2>${state.winner==='player'?'🏆 あなたの勝利!':'💀 敗北…'}</h2>
-       <button onclick="resetGame()">最初からやり直す</button></div></div>` : '';
-
-  requestAnimationFrame(flushFx);
-}
-
-newGame();
-</script>
+<script src="src/data.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/battle.js"></script>
+<script src="src/ui.js"></script>
 </body>
 </html>
