@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食卓バトル β</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#122922; --board:#1c3a30; --line:#2f5346;
+  --cream:#fbf3df; --ink:#25211a; --sub:#6f6a5c;
+  --front:#d9534f; --back:#e0a63d; --king:#3fae91;
+  --enemy-accent:#5b7fae; --danger:#e05656; --ok:#5fbf8f;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--cream);
+  font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
+  padding:16px; max-width:520px; margin:0 auto;
+}
+h1{
+  font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:20px;
+  margin:0 0 2px; letter-spacing:0.02em;
+}
+.sub{font-size:12px; color:#9fb3a8; margin:0 0 14px;}
+.board{background:var(--board); border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px;}
+.row{display:flex; gap:8px; justify-content:center; margin:4px 0;}
+.row.enemy-back, .row.player-back{ }
+.card-tile{
+  flex:1; max-width:110px; background:var(--cream); color:var(--ink);
+  border-radius:10px; padding:6px 6px 7px; border:2px solid transparent;
+  position:relative; min-height:80px; cursor:default; transition:transform .1s;
+}
+.card-tile.empty{background:transparent; border:2px dashed #3d6152; color:#5f8977; display:flex; align-items:center; justify-content:center; font-size:11px;}
+.card-tile.dead{opacity:0.35;}
+.card-tile.clickable{cursor:pointer;}
+.card-tile.clickable:active{transform:scale(0.97);}
+.card-tile.selected{border-color:#2c2c2a; box-shadow:0 0 0 2px var(--ink) inset;}
+.card-tile.targetable{border-color:var(--danger); box-shadow:0 0 0 2px var(--danger);}
+.role-tag{
+  font-size:9px; font-weight:700; letter-spacing:0.05em; padding:1px 5px; border-radius:999px;
+  display:inline-block; margin-bottom:3px; color:#fff;
+}
+.role-front{background:var(--front);} .role-back{background:var(--back); color:#3a2a06;} .role-king{background:var(--king);}
+.card-name{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:12px; line-height:1.2; margin-bottom:3px;}
+.hpbar{height:6px; background:#e4dcc4; border-radius:4px; overflow:hidden; margin-bottom:3px;}
+.hpfill{height:100%; background:#c9463e; transition:width .3s;}
+.hptext{font-size:9px; color:var(--sub); margin-bottom:3px;}
+.sp-dots{display:flex; gap:2px; margin-bottom:3px;}
+.sp-dot{width:7px; height:7px; border-radius:50%; background:#d8cfa9; border:1px solid #b8ac7e;}
+.sp-dot.filled{background:#2c8a5f; border-color:#1f6b47;}
+.teamsp{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:11px; color:#cfe3da;}
+.teamsp-dots{margin-bottom:0;}
+.teamsp-dots .sp-dot{width:11px; height:11px;}
+.status-badge{font-size:9px; font-weight:700; padding:1px 5px; border-radius:6px; display:inline-block;}
+.status-burn{background:#f0dcd6; color:#a3402f;}
+.status-poison{background:#e6dcf2; color:#5c3a99;}
+.status-freeze{background:#dcecf7; color:#2a6ea0;}
+.status-paralyze{background:#f7f0c9; color:#8a6f0c;}
+#log{
+  background:var(--board); border:1px solid var(--line); border-radius:14px;
+  padding:10px 12px; height:110px; overflow-y:auto; font-size:12px; line-height:1.6; margin-bottom:10px;
+}
+#log div{color:#c9dbd0;}
+#log div.important{color:#f4d98c; font-weight:700;}
+#actionPanel{
+  background:var(--board); border:1px solid var(--line); border-radius:14px; padding:10px; min-height:56px; margin-bottom:10px;
+}
+.hint{font-size:12px; color:#9fb3a8;}
+.btn-row{display:flex; flex-wrap:wrap; gap:6px;}
+button{
+  font-family:inherit; font-size:12.5px; border:none; border-radius:9px; padding:8px 12px;
+  background:#2c8a5f; color:#fff; cursor:pointer; font-weight:700;
+}
+button.secondary{background:#3d5a4e;}
+button.move{background:var(--back); color:#3a2a06;}
+button.end{background:var(--danger);}
+button.wide{width:100%; margin-top:6px;}
+button:disabled{opacity:0.4; cursor:default;}
+#endTurnWrap{display:flex; gap:8px;}
+#banner{
+  display:none; text-align:center; padding:14px; border-radius:14px; margin-bottom:10px;
+  font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px;
+}
+#banner.win{background:#2c8a5f; display:block;}
+#banner.lose{background:var(--danger); display:block;}
+</style>
+</head>
+<body>
+
+<h1>食卓バトル β</h1>
+<p class="sub">前衛が壁になり、いなければ後衛・王に直撃。SPはプレイヤー共通で、自分のターンが来るたびに1回復。続く限り1ターンに何度でも行動できます。</p>
+
+<div id="banner"></div>
+
+<div class="board">
+  <div class="teamsp" id="enemySP"></div>
+  <div class="row enemy-back" id="enemyBack"></div>
+  <div class="row enemy-front" id="enemyFront"></div>
+</div>
+
+<div id="log"></div>
+
+<div class="board">
+  <div class="row player-front" id="playerFront"></div>
+  <div class="row player-back" id="playerBack"></div>
+  <div class="teamsp" id="playerSP"></div>
+</div>
+
+<div id="actionPanel"></div>
+<div id="endTurnWrap">
+  <button class="end wide" id="endTurnBtn" onclick="onEndTurn()">ターン終了</button>
+</div>
+<div style="text-align:center; margin-top:10px;">
+  <button class="secondary" onclick="resetGame()">最初からやり直す</button>
+</div>
+
+<script>
+const STATUS_LABEL = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
+
+const CARD_DB = {
+  karai: {name:'激辛くん', elem:'炎', hp:35,
+    frontNormal:{name:'唐辛子パンチ', cost:1, power:16},
+    frontSpecial:{name:'爆速フレイバー', cost:1, power:10, status:{type:'burn', chance:0.2}},
+    back:{name:'辛味オーラ', cost:1, power:7},
+    kingDesc:'猛暑の意地:前衛2枚生存中は被ダメ-10%'},
+  kaki: {name:'かき氷ちゃん', elem:'氷', hp:40,
+    frontNormal:{name:'シャリシャリアタック', cost:1, power:14},
+    frontSpecial:{name:'フリーズタッチ', cost:1, power:8, status:{type:'freeze', chance:0.1}},
+    back:{name:'冷気ミスト', cost:1, power:6},
+    kingDesc:'クールダウン:ターン開始時にHP+3'},
+  natto: {name:'ねばねば納豆', elem:'毒', hp:38,
+    frontNormal:{name:'粘着シュート', cost:1, power:13},
+    frontSpecial:{name:'発酵ニードル', cost:1, power:9, status:{type:'poison', chance:1.0}},
+    back:{name:'発酵ガス', cost:1, power:5, status:{type:'poison', chance:0.3}},
+    kingDesc:'発酵パワー:相手が状態異常なら追加ダメ+3'},
+  soda: {name:'シュワシュワソーダ', elem:'雷', hp:32,
+    frontNormal:{name:'炭酸弾け', cost:1, power:18},
+    frontSpecial:{name:'スパークタッチ', cost:1, power:10, status:{type:'paralyze', chance:0.25}},
+    back:{name:'気泡はじき', cost:1, power:5},
+    kingDesc:'怒りの泡立ち:味方が倒れるたび攻撃力+10%'},
+  onigiri: {name:'しろいおにぎり', elem:'無', hp:45,
+    frontNormal:{name:'まんまるタックル', cost:1, power:15},
+    frontSpecial:{name:'ふりかけ散らし', cost:1, power:9, drainSP:1},
+    back:{name:'のり巻きシールド', cost:1, power:0, friendly:true, shield:1},
+    kingDesc:'安定の白米:後衛2枚生存中は毎ターンHP+5回復'}
+};
+
+function createInstance(tplId){
+  const t = CARD_DB[tplId];
+  return {tplId, name:t.name, elem:t.elem, hp:t.hp, maxHp:t.hp,
+    status:null, statusTurns:0, shield:0, alive:true,
+    frontNormal:t.frontNormal, frontSpecial:t.frontSpecial, back:t.back, kingDesc:t.kingDesc};
+}
+
+let teams, state;
+
+function newGame(){
+  teams = {
+    player:{ fallenCount:0, sp:0, spCap:3, slots:{
+      frontL:createInstance('karai'), frontR:createInstance('soda'),
+      backL:createInstance('kaki'), backR:createInstance('natto'),
+      king:createInstance('onigiri')
+    }},
+    enemy:{ fallenCount:0, sp:0, spCap:3, slots:{
+      frontL:createInstance('natto'), frontR:createInstance('onigiri'),
+      backL:createInstance('karai'), backR:createInstance('soda'),
+      king:createInstance('kaki')
+    }}
+  };
+  state = {turn:'player', over:false, winner:null, selected:null, pendingAction:null, moveMode:false, moveSource:null, log:[]};
+  log('バトル開始!前衛が壁になっている間は後衛と王は狙われない。SPはチーム共通、自分のターンが来るたびに1回復する。', true);
+  startTurn('player');
+  render();
+}
+
+function log(msg, important){ state.log.push({msg, important:!!important}); }
+
+function statusLabel(t){ return STATUS_LABEL[t] || t; }
+
+function aliveSlots(teamKey, filterFn){
+  const s = teams[teamKey].slots;
+  return Object.keys(s).filter(k => s[k] && s[k].alive && (!filterFn || filterFn(k, s[k])));
+}
+
+function applyKingDamageMods(attackerTeamKey, defenderTeamKey, baseDmg, target){
+  let dmg = baseDmg;
+  const aKing = teams[attackerTeamKey].slots.king;
+  const dKing = teams[defenderTeamKey].slots.king;
+  if(aKing && aKing.alive){
+    if(aKing.tplId==='soda'){ dmg *= (1 + 0.1*teams[attackerTeamKey].fallenCount); }
+    if(aKing.tplId==='natto' && target.status){ dmg += 3; }
+  }
+  if(dKing && dKing.alive){
+    if(dKing.tplId==='karai'){
+      const fronts = ['frontL','frontR'].filter(k=>teams[defenderTeamKey].slots[k] && teams[defenderTeamKey].slots[k].alive).length;
+      if(fronts>=2) dmg *= 0.9;
+    }
+  }
+  return Math.max(0, Math.round(dmg));
+}
+
+function startTurn(teamKey){
+  const team = teams[teamKey];
+  team.sp = Math.min(team.spCap, team.sp + 1);
+  Object.keys(team.slots).forEach(k=>{
+    const c = team.slots[k];
+    if(!c || !c.alive) return;
+    if(c.status==='burn' || c.status==='poison'){
+      const dmg = c.status==='burn' ? 2 : 3;
+      c.hp = Math.max(0, c.hp - dmg);
+      log(`${c.name}は${statusLabel(c.status)}のダメージ${dmg}!`);
+      c.statusTurns--;
+      if(c.statusTurns<=0) c.status=null;
+      if(c.hp<=0) killCard(teamKey, k);
+    }
+  });
+  if(state && state.over) return;
+  // king turn-start effects
+  const king = team.slots.king;
+  if(king && king.alive){
+    if(king.tplId==='kaki'){ king.hp = Math.min(king.maxHp, king.hp+3); log(`${king.name}の「クールダウン」でHP+3`); }
+    if(king.tplId==='onigiri'){
+      const backsAlive = ['backL','backR'].filter(k=>team.slots[k] && team.slots[k].alive).length;
+      if(backsAlive>=2){ king.hp = Math.min(king.maxHp, king.hp+5); log(`${king.name}の「安定の白米」でHP+5`); }
+    }
+  }
+  log(`--- ${teamKey==='player' ? 'あなた' : '敵'}のターン(共通SP ${team.sp}/${team.spCap}) ---`, true);
+}
+
+function killCard(teamKey, slotKey){
+  const team = teams[teamKey];
+  const c = team.slots[slotKey];
+  if(!c || !c.alive) return;
+  c.alive = false;
+  team.fallenCount++;
+  log(`${c.name}は倒れた!`, true);
+  if(slotKey==='king'){ endGame(teamKey==='player' ? 'enemy' : 'player'); }
+}
+
+function endGame(winner){
+  state.over = true; state.winner = winner;
+  log(winner==='player' ? 'あなたの勝ち!' : '敵の勝ち…', true);
+}
+
+function roleOf(slotKey){ return slotKey.startsWith('front') ? 'front' : (slotKey==='king' ? 'king' : 'back'); }
+
+function validTargets(actingTeamKey, slotKey, skill){
+  const oppTeamKey = actingTeamKey==='player' ? 'enemy' : 'player';
+  if(skill.friendly){
+    return {teamKey:actingTeamKey, slots: aliveSlots(actingTeamKey)};
+  }
+  const role = roleOf(slotKey);
+  if(role==='front'){
+    const fronts = aliveSlots(oppTeamKey, k=>roleOf(k)==='front');
+    if(fronts.length>0) return {teamKey:oppTeamKey, slots:fronts};
+    return {teamKey:oppTeamKey, slots: aliveSlots(oppTeamKey, k=>roleOf(k)!=='front')};
+  }
+  return {teamKey:oppTeamKey, slots: aliveSlots(oppTeamKey)};
+}
+
+function executeSkill(actingTeamKey, slotKey, skill, targetTeamKey, targetSlotKey){
+  const team = teams[actingTeamKey];
+  const card = team.slots[slotKey];
+  if(!card || !card.alive || team.sp < skill.cost) return;
+
+  if(card.status==='freeze'){
+    log(`${card.name}は凍っていて動けなかった…`);
+    team.sp -= skill.cost; card.status=null;
+    clearSelection(); render(); return;
+  }
+  team.sp -= skill.cost;
+  let fizzle=false;
+  if(card.status==='paralyze'){
+    card.status=null;
+    if(Math.random()<0.5){ fizzle=true; log(`${card.name}はしびれて動けなかった…`); }
+  }
+  if(!fizzle){
+    const targetTeam = teams[targetTeamKey];
+    const target = targetTeam.slots[targetSlotKey];
+    if(skill.friendly && skill.shield){
+      target.shield += skill.shield;
+      log(`${card.name}の「${skill.name}」!${target.name}にシールド付与`);
+    } else if(target){
+      if(target.shield>0){
+        target.shield--;
+        log(`${card.name}の「${skill.name}」!${target.name}はシールドで防いだ`);
+      } else if(skill.power>0){
+        let dmg = applyKingDamageMods(actingTeamKey, targetTeamKey, skill.power, target);
+        target.hp = Math.max(0, target.hp - dmg);
+        log(`${card.name}の「${skill.name}」!${target.name}に${dmg}ダメージ`);
+        if(skill.drainSP){
+          targetTeam.sp = Math.max(0, targetTeam.sp - skill.drainSP);
+          log(`${targetTeamKey==='player' ? 'あなた' : '敵'}チームの共通SPを${skill.drainSP}削った`);
+        }
+        if(skill.status && target.alive && Math.random() < skill.status.chance){
+          target.status = skill.status.type;
+          target.statusTurns = skill.status.type==='burn' ? 2 : skill.status.type==='poison' ? 3 : 1;
+          log(`${target.name}は${statusLabel(skill.status.type)}状態になった`);
+        }
+        if(target.hp<=0){ killCard(targetTeamKey, targetSlotKey); }
+      }
+    }
+  }
+  clearSelection();
+  render();
+}
+
+function clearSelection(){ state.selected=null; state.pendingAction=null; state.moveMode=false; state.moveSource=null; }
+
+// ---- player interaction ----
+function selectCard(teamKey, slotKey){
+  if(state.over || state.turn!=='player' || teamKey!=='player') return;
+  const c = teams.player.slots[slotKey];
+  if(!c || !c.alive || roleOf(slotKey)==='king') return;
+  state.selected = slotKey; state.pendingAction=null; state.moveMode=false;
+  render();
+}
+
+function chooseSkill(skillKind){
+  const slotKey = state.selected;
+  const card = teams.player.slots[slotKey];
+  const skill = skillKind==='frontNormal' ? card.frontNormal : skillKind==='frontSpecial' ? card.frontSpecial : card.back;
+  if(teams.player.sp < skill.cost) return;
+  state.pendingAction = {slotKey, skill};
+  render();
+}
+
+function chooseTarget(teamKey, slotKey){
+  if(!state.pendingAction) return;
+  const {slotKey:sourceSlot, skill} = state.pendingAction;
+  const targetTeamKey = skill.friendly ? 'player' : 'enemy';
+  if(teamKey!==targetTeamKey) return;
+  const vt = validTargets('player', sourceSlot, skill);
+  if(!vt.slots.includes(slotKey)) return;
+  executeSkill('player', sourceSlot, skill, targetTeamKey, slotKey);
+}
+
+function startMove(){
+  if(!state.selected) return;
+  state.moveMode = true; state.moveSource = state.selected;
+  render();
+}
+
+function chooseMoveDest(slotKey){
+  if(!state.moveMode) return;
+  const src = state.moveSource;
+  if(roleOf(slotKey)==='king' || roleOf(src)==='king') return;
+  const s = teams.player.slots;
+  const tmp = s[src]; s[src] = s[slotKey]; s[slotKey] = tmp;
+  log('陣形を入れ替えた。このターンはここまで。', true);
+  clearSelection();
+  onEndTurn();
+}
+
+function cancelSelection(){ clearSelection(); render(); }
+
+function onEndTurn(){
+  if(state.over || state.turn!=='player') return;
+  clearSelection();
+  state.turn = 'enemy';
+  startTurn('enemy');
+  render();
+  if(!state.over) setTimeout(aiStep, 500);
+}
+
+function aiStep(){
+  if(state.over) return;
+  if(teams.enemy.sp < 1){ backToPlayer(); return; }
+  const actable = aliveSlots('enemy', (k)=> roleOf(k)!=='king');
+  if(actable.length===0){ backToPlayer(); return; }
+  const slotKey = actable[Math.floor(Math.random()*actable.length)];
+  const card = teams.enemy.slots[slotKey];
+  const role = roleOf(slotKey);
+  let skill;
+  if(role==='front'){ skill = Math.random()<0.4 ? card.frontSpecial : card.frontNormal; }
+  else { skill = card.back; }
+  if(teams.enemy.sp < skill.cost){ backToPlayer(); return; }
+  const vt = validTargets('enemy', slotKey, skill);
+  if(vt.slots.length===0){ if(!state.over) setTimeout(aiStep,500); return; }
+  const targetSlot = vt.slots[Math.floor(Math.random()*vt.slots.length)];
+  executeSkill('enemy', slotKey, skill, vt.teamKey, targetSlot);
+  if(!state.over) setTimeout(aiStep, 650);
+  else render();
+}
+
+function backToPlayer(){
+  state.turn = 'player';
+  startTurn('player');
+  render();
+}
+
+function resetGame(){ newGame(); }
+
+// ---- render ----
+function teamSpHtml(teamKey){
+  const team = teams[teamKey];
+  const dots = Array.from({length:team.spCap}).map((_,i)=>`<div class="sp-dot ${i<team.sp?'filled':''}"></div>`).join('');
+  const label = teamKey==='player' ? 'あなたの共通SP' : '敵の共通SP';
+  return `<span>${label}</span><div class="sp-dots teamsp-dots">${dots}</div>`;
+}
+
+function cardTile(teamKey, slotKey, opts){
+  const c = teams[teamKey].slots[slotKey];
+  const role = roleOf(slotKey);
+  const roleLabel = role==='front' ? '前衛' : role==='king' ? '王' : '後衛';
+  if(!c){
+    return `<div class="card-tile empty">(空き)</div>`;
+  }
+  let classes = 'card-tile';
+  if(!c.alive) classes += ' dead';
+  const isOwnClickable = teamKey==='player' && state.turn==='player' && !state.over && role!=='king' && c.alive
+    && !state.pendingAction && !state.moveMode;
+  const isTarget = (state.pendingAction && (
+      (state.pendingAction.skill.friendly && teamKey==='player') ||
+      (!state.pendingAction.skill.friendly && teamKey==='enemy')
+    ) && validTargets('player', state.pendingAction.slotKey, state.pendingAction.skill).slots.includes(slotKey) && c.alive);
+  const isMoveDest = state.moveMode && teamKey==='player' && role!=='king' && slotKey!==state.moveSource;
+
+  if(isOwnClickable || isMoveDest) classes += ' clickable';
+  if(isTarget) classes += ' targetable';
+  if(state.selected===slotKey && teamKey==='player') classes += ' selected';
+
+  let onclick = '';
+  if(isTarget) onclick = `onclick="chooseTarget('${teamKey}','${slotKey}')"`;
+  else if(isMoveDest) onclick = `onclick="chooseMoveDest('${slotKey}')"`;
+  else if(isOwnClickable) onclick = `onclick="selectCard('${teamKey}','${slotKey}')"`;
+
+  const hpPct = Math.round((c.hp/c.maxHp)*100);
+  const statusHtml = c.status ? `<span class="status-badge status-${c.status}">${statusLabel(c.status)}</span>` : (c.shield>0 ? `<span class="status-badge" style="background:#dcecf7;color:#2a6ea0;">盾${c.shield}</span>` : '');
+
+  return `<div class="${classes}" ${onclick}>
+    <span class="role-tag role-${role}">${roleLabel}</span>
+    <div class="card-name">${c.name}</div>
+    <div class="hpbar"><div class="hpfill" style="width:${hpPct}%"></div></div>
+    <div class="hptext">${c.hp}/${c.maxHp}</div>
+    ${statusHtml}
+  </div>`;
+}
+
+function render(){
+  document.getElementById('enemySP').innerHTML = teamSpHtml('enemy');
+  document.getElementById('enemyBack').innerHTML = ['backL','king','backR'].map(k=>cardTile('enemy',k)).join('');
+  document.getElementById('enemyFront').innerHTML = ['frontL','frontR'].map(k=>cardTile('enemy',k)).join('');
+  document.getElementById('playerFront').innerHTML = ['frontL','frontR'].map(k=>cardTile('player',k)).join('');
+  document.getElementById('playerBack').innerHTML = ['backL','king','backR'].map(k=>cardTile('player',k)).join('');
+  document.getElementById('playerSP').innerHTML = teamSpHtml('player');
+
+  const logEl = document.getElementById('log');
+  logEl.innerHTML = state.log.slice(-30).map(l=>`<div class="${l.important?'important':''}">${l.msg}</div>`).join('');
+  logEl.scrollTop = logEl.scrollHeight;
+
+  const panel = document.getElementById('actionPanel');
+  const endBtn = document.getElementById('endTurnBtn');
+  endBtn.disabled = state.over || state.turn!=='player';
+
+  if(state.over){
+    const b = document.getElementById('banner');
+    b.className = state.winner==='player' ? 'win' : 'lose';
+    b.textContent = state.winner==='player' ? 'あなたの勝利!' : '敗北…';
+    panel.innerHTML = `<div class="hint">王が倒れて決着。最初からやり直すボタンでリトライできます。</div>`;
+    return;
+  }
+  document.getElementById('banner').className = '';
+
+  if(state.turn!=='player'){
+    panel.innerHTML = `<div class="hint">敵のターン中…</div>`;
+    return;
+  }
+
+  if(state.moveMode){
+    panel.innerHTML = `<div class="hint">移動先の枠(自分の前衛/後衛)をタップしてください。</div>
+      <div class="btn-row"><button class="secondary" onclick="cancelSelection()">キャンセル</button></div>`;
+    return;
+  }
+
+  if(state.pendingAction){
+    panel.innerHTML = `<div class="hint">「${state.pendingAction.skill.name}」の対象を選んでください。</div>
+      <div class="btn-row"><button class="secondary" onclick="cancelSelection()">キャンセル</button></div>`;
+    return;
+  }
+
+  if(state.selected){
+    const c = teams.player.slots[state.selected];
+    const role = roleOf(state.selected);
+    const sp = teams.player.sp;
+    let btns = '';
+    if(role==='front'){
+      btns += `<button ${sp<c.frontNormal.cost?'disabled':''} onclick="chooseSkill('frontNormal')">${c.frontNormal.name}(SP${c.frontNormal.cost})</button>`;
+      btns += `<button ${sp<c.frontSpecial.cost?'disabled':''} onclick="chooseSkill('frontSpecial')">${c.frontSpecial.name}(SP${c.frontSpecial.cost})</button>`;
+    } else {
+      btns += `<button ${sp<c.back.cost?'disabled':''} onclick="chooseSkill('back')">${c.back.name}(SP${c.back.cost})</button>`;
+    }
+    btns += `<button class="move" onclick="startMove()">移動(このターン終了)</button>`;
+    btns += `<button class="secondary" onclick="cancelSelection()">選び直す</button>`;
+    panel.innerHTML = `<div class="hint">${c.name}を選択中(共通SP${sp}/${teams.player.spCap})。行動を選んでください。</div><div class="btn-row">${btns}</div>`;
+    return;
+  }
+
+  panel.innerHTML = `<div class="hint">自分のカードをタップして行動を選んでください。共通SPが残っていれば続けて他のカードも動かせます。</div>`;
+}
+
+newGame();
+</script>
+</body>
+</html>
