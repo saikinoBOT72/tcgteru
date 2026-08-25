@@ -9,7 +9,7 @@
 <style>
 :root{
   --ink:#000; --paper:#fff; --line:#000; --sub:#555;
-  --danger:#c0392b; --ok:#2c8a5f;
+  --danger:#c0392b; --ok:#2c8a5f; --block:#2a6ea0;
 }
 *{box-sizing:border-box;}
 body{
@@ -23,33 +23,33 @@ h1{
 }
 .sub{font-size:12px; color:var(--sub); margin:0 0 14px;}
 .board{background:var(--paper); border:1.5px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px;}
-.row{display:flex; gap:8px; justify-content:center; margin:4px 0; align-items:stretch;}
+.row{display:flex; gap:10px; justify-content:center; margin:4px 0; align-items:stretch;}
 
 /* ---- team-wide SP (outside cards: monochrome) ---- */
 .teamsp{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:11px; color:var(--ink); font-weight:700;}
-.teamsp-dots{display:flex; gap:4px;}
-.teamsp-dots .sp-dot{width:11px; height:11px; border-radius:50%; border:1.5px solid var(--ink); background:var(--paper);}
-.teamsp-dots .sp-dot.filled{background:var(--ink);}
+.teamsp-value{display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:20px; border:1.5px solid var(--ink); border-radius:6px; padding:0 6px; font-weight:900; font-size:13px;}
 
 /* ---- card ---- */
 .card-tile{
   flex:1; max-width:132px; aspect-ratio:5/7; background:var(--paper); color:var(--ink);
-  border-radius:10px; border:1.5px solid var(--line);
+  border-radius:12px; border:2px solid var(--line); box-shadow:3px 3px 0 var(--ink);
   position:relative; cursor:default; display:flex; flex-direction:column; overflow:hidden;
 }
-.card-tile.empty{border-style:dashed; color:var(--sub); align-items:center; justify-content:center; font-size:11px; aspect-ratio:5/7;}
+.card-tile.empty{border-style:dashed; box-shadow:none; color:var(--sub); align-items:center; justify-content:center; font-size:11px; aspect-ratio:5/7;}
 .card-tile.dead{filter:grayscale(1); opacity:0.4;}
 .card-tile.clickable{cursor:pointer;}
-.card-tile.clickable:active{transform:scale(0.97);}
+.card-tile.clickable:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink);}
 .card-tile.selected{border-width:3px;}
-.card-tile.targetable{border-style:dashed; border-width:2px; background:#f2f2f2;}
-.card-tile.movedest{border-style:dotted; border-width:2px; background:#f2f2f2;}
+.card-tile.targetable{border-style:dashed; border-width:2.5px; background:#f2f2f2;}
+.card-tile.movedest{border-style:dotted; border-width:2.5px; background:#f2f2f2;}
 
+.card-accent{height:3px;}
 .card-head{display:flex; align-items:center; justify-content:space-between; padding:3px 4px 2px; font-size:8px; font-weight:700;}
-.elem-badge{border:1px solid var(--ink); border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; font-size:9px;}
+.elem-badge{border:1px solid var(--ink); border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; font-size:9px; background:var(--paper);}
 .rarity-badge{border:1px solid var(--ink); border-radius:3px; padding:0 3px; font-size:8px;}
 
-.card-art{flex:0 0 34%; display:flex; align-items:center; justify-content:center; font-size:26px; border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);}
+.card-art{flex:0 0 34%; display:flex; align-items:center; justify-content:center; border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);}
+.art-svg{width:72%; height:72%;}
 
 .card-name-row{display:flex; align-items:baseline; justify-content:space-between; padding:2px 4px 0; gap:4px;}
 .card-name{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:9.5px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -64,12 +64,30 @@ h1{
 .skill-col.back-col .skill-cell:first-child{border-bottom:1px solid var(--ink);}
 .skill-cell .skill-role{font-weight:700; margin-right:2px;}
 
-.card-status{position:absolute; top:16px; right:2px; display:flex; flex-direction:column; gap:1px; align-items:flex-end;}
+.card-status{position:absolute; top:16px; right:2px; display:flex; flex-direction:column; gap:1px; align-items:flex-end; z-index:3;}
 .status-badge{font-size:7px; font-weight:700; padding:0 3px; border-radius:4px; border:1px solid var(--ink); background:var(--paper);}
 .status-burn{color:var(--danger);}
 .status-poison{color:#5c3a99;}
 .status-freeze{color:#2a6ea0;}
 .status-paralyze{color:#8a6f0c;}
+
+/* ---- attack fx ---- */
+.fx-pop{position:absolute; left:50%; top:36%; transform:translate(-50%,0); font-size:14px; font-weight:900; pointer-events:none;
+  animation:fxFloat .85s ease-out forwards; z-index:6; -webkit-text-stroke:3px #fff; paint-order:stroke fill;}
+.fx-pop-dmg{color:var(--danger);}
+.fx-pop-block{color:var(--block);}
+.fx-pop-buff{color:var(--ok);}
+.fx-pop-neutral{color:var(--ink);}
+@keyframes fxFloat{
+  0%{opacity:0; transform:translate(-50%,10px) scale(0.7);}
+  15%{opacity:1; transform:translate(-50%,0) scale(1.2);}
+  70%{opacity:1;}
+  100%{opacity:0; transform:translate(-50%,-24px) scale(1);}
+}
+.fx-hit{position:absolute; inset:0; background:var(--ink); opacity:0; animation:fxHit .3s ease-out; pointer-events:none; z-index:4;}
+@keyframes fxHit{0%{opacity:0.35;} 100%{opacity:0;}}
+.fx-ring{position:absolute; inset:-5px; border-radius:16px; border:3px solid var(--ink); opacity:0; animation:fxRing .55s ease-out; pointer-events:none; z-index:4;}
+@keyframes fxRing{0%{opacity:1; transform:scale(0.9);} 100%{opacity:0; transform:scale(1.18);}}
 
 #log{
   background:var(--paper); border:1.5px solid var(--line); border-radius:10px;
@@ -88,7 +106,6 @@ button{
   background:var(--paper); color:var(--ink); cursor:pointer; font-weight:700;
 }
 button.secondary{background:var(--paper); color:var(--ink);}
-button.move{border-style:dashed;}
 button.end{background:var(--ink); color:var(--paper);}
 button.wide{width:100%; margin-top:6px;}
 button:disabled{opacity:0.35; cursor:default;}
@@ -98,12 +115,89 @@ button:disabled{opacity:0.35; cursor:default;}
   font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px; background:var(--paper); color:var(--ink);
 }
 #banner.win, #banner.lose{display:block;}
+
+/* ---- card enlarge modal ---- */
+.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;}
+.modal-card{background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; width:100%; max-width:300px; box-shadow:7px 7px 0 var(--ink); position:relative; padding-bottom:10px; max-height:90vh; overflow-y:auto;}
+.modal-close{position:absolute; top:8px; right:8px; background:var(--ink); color:var(--paper); border:none; border-radius:50%; width:26px; height:26px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2;}
+.modal-accent{height:6px; border-radius:14px 14px 0 0;}
+.modal-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px 0;}
+.modal-elem{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700;}
+.modal-elem .elem-badge{width:20px; height:20px; font-size:12px;}
+.modal-art{height:120px; display:flex; align-items:center; justify-content:center; margin:8px 12px; border:1.5px solid var(--ink); border-radius:10px;}
+.modal-art .art-svg{width:56%; height:56%;}
+.modal-name-row{display:flex; align-items:baseline; justify-content:space-between; padding:0 14px;}
+.modal-name{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px;}
+.modal-hp{font-size:12px; font-weight:700;}
+.hpbar-mono.modal-hpbar{height:6px; margin:4px 14px 8px;}
+.modal-skills{display:flex; flex-direction:column; gap:5px; padding:2px 12px;}
+.skill-row{display:flex; align-items:center; gap:6px; font-family:inherit; text-align:left; background:var(--paper); border:1.5px solid var(--ink); border-radius:9px; padding:6px 8px; font-size:11px; color:var(--ink); width:100%;}
+.skill-row.usable{cursor:pointer; font-weight:700;}
+.skill-row.usable:active{background:#eee;}
+.skill-row:not(.usable){opacity:0.4; border-style:dashed;}
+.skill-row.king{opacity:0.8; border-style:solid; background:#f6f6f6;}
+.skill-tag{font-size:8px; border:1px solid var(--ink); border-radius:4px; padding:1px 4px; white-space:nowrap; flex:0 0 auto;}
+.skill-body{display:flex; flex-direction:column; min-width:0;}
+.skill-name{font-weight:700; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.skill-detail{font-size:9px; color:#444; white-space:normal; line-height:1.3;}
+.modal-move{width:calc(100% - 24px); margin:8px 12px 4px; background:var(--paper); border:2px dashed var(--ink); border-radius:9px; padding:9px; font-weight:700;}
+.modal-cancel{width:calc(100% - 24px); margin:2px 12px 10px; font-weight:700;}
 </style>
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute;overflow:hidden;">
+<defs>
+<symbol id="art-karai" viewBox="0 0 64 64">
+  <path d="M31 10 Q36 4 41 9 L34 18 Z" fill="#4d9a4d" stroke="#2e6b2e" stroke-width="1.5"/>
+  <path d="M33 14 C50 15 55 30 47 43 C41 53 26 57 19 49 C13 41 18 29 27 22 C21 19 22 13 33 14 Z" fill="#e2483f" stroke="#9c2a22" stroke-width="2.5"/>
+  <circle cx="29" cy="34" r="2.6" fill="#1a1a1a"/>
+  <circle cx="38" cy="31" r="2.6" fill="#1a1a1a"/>
+  <path d="M28 41 Q34 46 40 40" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="24" cy="30" r="2" fill="#ffffff" opacity="0.7"/>
+</symbol>
+<symbol id="art-kaki" viewBox="0 0 64 64">
+  <path d="M21 54 L43 54 L38 27 Q32 22 26 27 Z" fill="#eaf6fb" stroke="#4f96c2" stroke-width="2.5"/>
+  <ellipse cx="32" cy="24" rx="17" ry="12" fill="#ffffff" stroke="#4f96c2" stroke-width="2.5"/>
+  <path d="M20 25 Q32 12 44 25" fill="none" stroke="#bfe3f2" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="32" cy="12" r="4" fill="#d84b4b" stroke="#a12b22" stroke-width="1.5"/>
+  <circle cx="26" cy="34" r="2.4" fill="#1a1a1a"/>
+  <circle cx="37" cy="34" r="2.4" fill="#1a1a1a"/>
+  <path d="M26 40 Q32 44 38 40" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+<symbol id="art-natto" viewBox="0 0 64 64">
+  <ellipse cx="22" cy="40" rx="12" ry="15" fill="#c9a15a" stroke="#7d5f2c" stroke-width="2.2"/>
+  <ellipse cx="42" cy="40" rx="12" ry="15" fill="#d9b16a" stroke="#7d5f2c" stroke-width="2.2"/>
+  <ellipse cx="32" cy="29" rx="13" ry="16" fill="#e6c37f" stroke="#7d5f2c" stroke-width="2.2"/>
+  <path d="M18 46 Q23 40 20 52" fill="none" stroke="#f4e2ad" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M44 46 Q40 40 45 52" fill="none" stroke="#f4e2ad" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="27" cy="27" r="2.4" fill="#1a1a1a"/>
+  <circle cx="37" cy="27" r="2.4" fill="#1a1a1a"/>
+  <path d="M27 33 Q32 36 37 33" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+<symbol id="art-soda" viewBox="0 0 64 64">
+  <path d="M20 20 L44 20 L39 55 L25 55 Z" fill="#fdf0b0" stroke="#c9a227" stroke-width="2.5"/>
+  <rect x="29" y="4" width="5" height="20" rx="2.5" fill="#ffffff" stroke="#c9a227" stroke-width="1.5"/>
+  <circle cx="27" cy="30" r="2" fill="#ffffff" stroke="#c9a227" stroke-width="1"/>
+  <circle cx="36" cy="26" r="1.6" fill="#ffffff" stroke="#c9a227" stroke-width="1"/>
+  <circle cx="33" cy="38" r="2.2" fill="#ffffff" stroke="#c9a227" stroke-width="1"/>
+  <circle cx="26" cy="45" r="2.2" fill="#1a1a1a"/>
+  <circle cx="37" cy="45" r="2.2" fill="#1a1a1a"/>
+  <path d="M27 50 Q32 53 37 50" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+<symbol id="art-onigiri" viewBox="0 0 64 64">
+  <clipPath id="onigiri-clip"><path d="M32 7 L55 49 Q57 56 50 56 L14 56 Q7 56 9 49 Z"/></clipPath>
+  <path d="M32 7 L55 49 Q57 56 50 56 L14 56 Q7 56 9 49 Z" fill="#ffffff" stroke="#333333" stroke-width="2.5"/>
+  <rect x="0" y="39" width="64" height="17" fill="#262626" clip-path="url(#onigiri-clip)"/>
+  <circle cx="27" cy="30" r="2.4" fill="#1a1a1a"/>
+  <circle cx="37" cy="30" r="2.4" fill="#1a1a1a"/>
+  <path d="M27 36 Q32 39 37 36" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+</defs>
+</svg>
+
 <h1>食卓バトル β</h1>
-<p class="sub">前衛が壁になり、いなければ後衛・王に直撃。SPはプレイヤー共通で、自分のターンが来るたびに1回復。続く限り1ターンに何度でも行動できます。</p>
+<p class="sub">前衛が壁になり、いなければ後衛・王に直撃。SPはプレイヤー共通で、自分のターンが来るたびに1回復(上限なし)。続く限り1ターンに何度でも行動できます。</p>
 
 <div id="banner"></div>
 
@@ -129,34 +223,41 @@ button:disabled{opacity:0.35; cursor:default;}
   <button class="secondary" onclick="resetGame()">最初からやり直す</button>
 </div>
 
+<div id="cardModalRoot"></div>
+
 <script>
 const STATUS_LABEL = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
 const ELEMENT_META = {
-  '炎':{icon:'🔥'}, '氷':{icon:'❄️'}, '毒':{icon:'☠️'}, '雷':{icon:'⚡'}, '無':{icon:'⚪'}
+  '炎':{icon:'🔥', accent:'#e2483f', tint:'#fbe4e2'},
+  '氷':{icon:'❄️', accent:'#4f96c2', tint:'#e6f4fb'},
+  '毒':{icon:'☠️', accent:'#8e5cc9', tint:'#efe6f8'},
+  '雷':{icon:'⚡', accent:'#c9a227', tint:'#fbf3d6'},
+  '無':{icon:'⚪', accent:'#888888', tint:'#eeeeee'}
 };
+const MOVE_COST = 1;
 
 const CARD_DB = {
-  karai: {name:'激辛くん', elem:'炎', rarity:'N', art:'🌶️', hp:35,
+  karai: {name:'激辛くん', elem:'炎', rarity:'N', hp:35,
     frontNormal:{name:'唐辛子パンチ', cost:1, power:16},
     frontSpecial:{name:'爆速フレイバー', cost:1, power:10, status:{type:'burn', chance:0.2}},
     back:{name:'辛味オーラ', cost:1, power:7},
     kingDesc:'猛暑の意地:前衛2枚生存中は被ダメ-10%'},
-  kaki: {name:'かき氷ちゃん', elem:'氷', rarity:'N', art:'🍧', hp:40,
+  kaki: {name:'かき氷ちゃん', elem:'氷', rarity:'N', hp:40,
     frontNormal:{name:'シャリシャリアタック', cost:1, power:14},
     frontSpecial:{name:'フリーズタッチ', cost:1, power:8, status:{type:'freeze', chance:0.1}},
     back:{name:'冷気ミスト', cost:1, power:6},
     kingDesc:'クールダウン:ターン開始時にHP+3'},
-  natto: {name:'ねばねば納豆', elem:'毒', rarity:'N', art:'🫘', hp:38,
+  natto: {name:'ねばねば納豆', elem:'毒', rarity:'N', hp:38,
     frontNormal:{name:'粘着シュート', cost:1, power:13},
     frontSpecial:{name:'発酵ニードル', cost:1, power:9, status:{type:'poison', chance:1.0}},
     back:{name:'発酵ガス', cost:1, power:5, status:{type:'poison', chance:0.3}},
     kingDesc:'発酵パワー:相手が状態異常なら追加ダメ+3'},
-  soda: {name:'シュワシュワソーダ', elem:'雷', rarity:'N', art:'🥤', hp:32,
+  soda: {name:'シュワシュワソーダ', elem:'雷', rarity:'N', hp:32,
     frontNormal:{name:'炭酸弾け', cost:1, power:18},
     frontSpecial:{name:'スパークタッチ', cost:1, power:10, status:{type:'paralyze', chance:0.25}},
     back:{name:'気泡はじき', cost:1, power:5},
     kingDesc:'怒りの泡立ち:味方が倒れるたび攻撃力+10%'},
-  onigiri: {name:'しろいおにぎり', elem:'無', rarity:'N', art:'🍙', hp:45,
+  onigiri: {name:'しろいおにぎり', elem:'無', rarity:'N', hp:45,
     frontNormal:{name:'まんまるタックル', cost:1, power:15},
     frontSpecial:{name:'ふりかけ散らし', cost:1, power:9, drainSP:1},
     back:{name:'のり巻きシールド', cost:1, power:0, friendly:true, shield:1},
@@ -165,7 +266,7 @@ const CARD_DB = {
 
 function createInstance(tplId){
   const t = CARD_DB[tplId];
-  return {tplId, name:t.name, elem:t.elem, rarity:t.rarity, art:t.art, hp:t.hp, maxHp:t.hp,
+  return {tplId, name:t.name, elem:t.elem, rarity:t.rarity, hp:t.hp, maxHp:t.hp,
     status:null, statusTurns:0, shield:0, alive:true,
     frontNormal:t.frontNormal, frontSpecial:t.frontSpecial, back:t.back, kingDesc:t.kingDesc};
 }
@@ -174,19 +275,19 @@ let teams, state;
 
 function newGame(){
   teams = {
-    player:{ fallenCount:0, sp:0, spCap:3, slots:{
+    player:{ fallenCount:0, sp:0, slots:{
       frontL:createInstance('karai'), frontR:createInstance('soda'),
       backL:createInstance('kaki'), backR:createInstance('natto'),
       king:createInstance('onigiri')
     }},
-    enemy:{ fallenCount:0, sp:0, spCap:3, slots:{
+    enemy:{ fallenCount:0, sp:0, slots:{
       frontL:createInstance('natto'), frontR:createInstance('onigiri'),
       backL:createInstance('karai'), backR:createInstance('soda'),
       king:createInstance('kaki')
     }}
   };
-  state = {turn:'player', over:false, winner:null, selected:null, pendingAction:null, moveMode:false, moveSource:null, log:[]};
-  log('バトル開始!前衛が壁になっている間は後衛と王は狙われない。SPはチーム共通、自分のターンが来るたびに1回復する。', true);
+  state = {turn:'player', over:false, winner:null, selected:null, pendingAction:null, moveMode:false, moveSource:null, log:[], fx:null};
+  log('バトル開始!前衛が壁になっている間は後衛と王は狙われない。SPはチーム共通、自分のターンが来るたびに1回復する(上限なし)。', true);
   startTurn('player');
   render();
 }
@@ -195,6 +296,16 @@ function log(msg, important){ state.log.push({msg, important:!!important}); }
 
 function statusLabel(t){ return STATUS_LABEL[t] || t; }
 function kingSkillName(card){ return card.kingDesc.split(':')[0]; }
+function kingSkillDesc(card){ return card.kingDesc.split(':').slice(1).join(':'); }
+
+function skillDetail(skill){
+  const parts = [`SP${skill.cost}`];
+  if(skill.power>0) parts.push(`威力${skill.power}`);
+  if(skill.status) parts.push(`${Math.round(skill.status.chance*100)}%で${statusLabel(skill.status.type)}`);
+  if(skill.drainSP) parts.push(`相手SP-${skill.drainSP}`);
+  if(skill.shield) parts.push(`シールド+${skill.shield}`);
+  return parts.join(' / ');
+}
 
 function aliveSlots(teamKey, filterFn){
   const s = teams[teamKey].slots;
@@ -220,7 +331,7 @@ function applyKingDamageMods(attackerTeamKey, defenderTeamKey, baseDmg, target){
 
 function startTurn(teamKey){
   const team = teams[teamKey];
-  team.sp = Math.min(team.spCap, team.sp + 1);
+  team.sp = team.sp + 1;
   Object.keys(team.slots).forEach(k=>{
     const c = team.slots[k];
     if(!c || !c.alive) return;
@@ -243,7 +354,7 @@ function startTurn(teamKey){
       if(backsAlive>=2){ king.hp = Math.min(king.maxHp, king.hp+5); log(`${king.name}の「安定の白米」でHP+5`); }
     }
   }
-  log(`--- ${teamKey==='player' ? 'あなた' : '敵'}のターン(共通SP ${team.sp}/${team.spCap}) ---`, true);
+  log(`--- ${teamKey==='player' ? 'あなた' : '敵'}のターン(共通SP ${team.sp}) ---`, true);
 }
 
 function killCard(teamKey, slotKey){
@@ -285,28 +396,40 @@ function executeSkill(actingTeamKey, slotKey, skill, targetTeamKey, targetSlotKe
   if(card.status==='freeze'){
     log(`${card.name}は凍っていて動けなかった…`);
     team.sp -= skill.cost; card.status=null;
+    state.fx = {ts:Date.now(), attacker:{team:actingTeamKey,slot:slotKey}, attackerText:'凍結中…'};
     clearSelection(); render(); return;
   }
   team.sp -= skill.cost;
   let fizzle=false;
   if(card.status==='paralyze'){
     card.status=null;
-    if(Math.random()<0.5){ fizzle=true; log(`${card.name}はしびれて動けなかった…`); }
+    if(Math.random()<0.5){
+      fizzle=true; log(`${card.name}はしびれて動けなかった…`);
+      state.fx = {ts:Date.now(), attacker:{team:actingTeamKey,slot:slotKey}, attackerText:'しびれ…'};
+    }
   }
   if(!fizzle){
     const targetTeam = teams[targetTeamKey];
     const target = targetTeam.slots[targetSlotKey];
+    const fx = {ts:Date.now(), attacker:{team:actingTeamKey,slot:slotKey}};
     if(skill.friendly && skill.shield){
       target.shield += skill.shield;
       log(`${card.name}の「${skill.name}」!${target.name}にシールド付与`);
+      fx.target = {team:targetTeamKey, slot:targetSlotKey};
+      fx.targetText = `盾+${skill.shield}`; fx.targetKind = 'buff';
+      state.fx = fx;
     } else if(target){
       if(target.shield>0){
         target.shield--;
         log(`${card.name}の「${skill.name}」!${target.name}はシールドで防いだ`);
+        fx.target = {team:targetTeamKey, slot:targetSlotKey};
+        fx.targetText = '防御!'; fx.targetKind = 'block';
+        state.fx = fx;
       } else if(skill.power>0){
         let dmg = applyKingDamageMods(actingTeamKey, targetTeamKey, skill.power, target);
         target.hp = Math.max(0, target.hp - dmg);
         log(`${card.name}の「${skill.name}」!${target.name}に${dmg}ダメージ`);
+        let fxText = `-${dmg}`;
         if(skill.drainSP){
           targetTeam.sp = Math.max(0, targetTeam.sp - skill.drainSP);
           log(`${targetTeamKey==='player' ? 'あなた' : '敵'}チームの共通SPを${skill.drainSP}削った`);
@@ -315,7 +438,11 @@ function executeSkill(actingTeamKey, slotKey, skill, targetTeamKey, targetSlotKe
           target.status = skill.status.type;
           target.statusTurns = skill.status.type==='burn' ? 2 : skill.status.type==='poison' ? 3 : 1;
           log(`${target.name}は${statusLabel(skill.status.type)}状態になった`);
+          fxText += ` ${statusLabel(skill.status.type)}!`;
         }
+        fx.target = {team:targetTeamKey, slot:targetSlotKey};
+        fx.targetText = fxText; fx.targetKind = 'damage';
+        state.fx = fx;
         if(target.hp<=0){ killCard(targetTeamKey, targetSlotKey); }
       }
     }
@@ -337,10 +464,15 @@ function selectCard(teamKey, slotKey){
 
 function chooseSkill(skillKind){
   const slotKey = state.selected;
+  if(!slotKey) return;
   const card = teams.player.slots[slotKey];
+  const role = roleOf(slotKey);
+  if(skillKind==='back' && role!=='back') return;
+  if((skillKind==='frontNormal'||skillKind==='frontSpecial') && role!=='front') return;
   const skill = skillKind==='frontNormal' ? card.frontNormal : skillKind==='frontSpecial' ? card.frontSpecial : card.back;
   if(teams.player.sp < skill.cost) return;
   state.pendingAction = {slotKey, skill};
+  state.selected = null;
   render();
 }
 
@@ -354,21 +486,24 @@ function chooseTarget(teamKey, slotKey){
   executeSkill('player', sourceSlot, skill, targetTeamKey, slotKey);
 }
 
-function startMove(){
+function startMoveFromModal(){
   if(!state.selected) return;
-  state.moveMode = true; state.moveSource = state.selected;
+  if(teams.player.sp < MOVE_COST) return;
+  state.moveMode = true; state.moveSource = state.selected; state.selected = null;
   render();
 }
 
 function chooseMoveDest(slotKey){
   if(!state.moveMode) return;
+  if(teams.player.sp < MOVE_COST) { clearSelection(); render(); return; }
   const src = state.moveSource;
   if(roleOf(slotKey)==='king' || roleOf(src)==='king') return;
+  teams.player.sp -= MOVE_COST;
   const s = teams.player.slots;
   const tmp = s[src]; s[src] = s[slotKey]; s[slotKey] = tmp;
-  log('陣形を入れ替えた。このターンはここまで。', true);
+  log(`陣形を入れ替えた(SP-${MOVE_COST})`, true);
   clearSelection();
-  onEndTurn();
+  render();
 }
 
 function cancelSelection(){ clearSelection(); render(); }
@@ -398,7 +533,7 @@ function aiStep(){
   if(vt.slots.length===0){ if(!state.over) setTimeout(aiStep,500); return; }
   const targetSlot = vt.slots[Math.floor(Math.random()*vt.slots.length)];
   executeSkill('enemy', slotKey, skill, vt.teamKey, targetSlot);
-  if(!state.over) setTimeout(aiStep, 650);
+  if(!state.over) setTimeout(aiStep, 750);
   else render();
 }
 
@@ -413,9 +548,23 @@ function resetGame(){ newGame(); }
 // ---- render ----
 function teamSpHtml(teamKey){
   const team = teams[teamKey];
-  const dots = Array.from({length:team.spCap}).map((_,i)=>`<div class="sp-dot ${i<team.sp?'filled':''}"></div>`).join('');
   const label = teamKey==='player' ? 'あなたの共通SP' : '敵の共通SP';
-  return `<span>${label}</span><div class="teamsp-dots">${dots}</div>`;
+  return `<span>${label}</span><span class="teamsp-value">${team.sp}</span>`;
+}
+
+function fxOverlayHtml(teamKey, slotKey){
+  const fx = state.fx;
+  if(!fx || Date.now() - fx.ts > 850) return '';
+  let html = '';
+  if(fx.attacker && fx.attacker.team===teamKey && fx.attacker.slot===slotKey){
+    html += `<div class="fx-ring"></div>`;
+    if(fx.attackerText) html += `<div class="fx-pop fx-pop-neutral">${fx.attackerText}</div>`;
+  }
+  if(fx.target && fx.target.team===teamKey && fx.target.slot===slotKey && fx.targetText){
+    const kindCls = fx.targetKind==='damage' ? 'fx-pop-dmg' : fx.targetKind==='block' ? 'fx-pop-block' : fx.targetKind==='buff' ? 'fx-pop-buff' : 'fx-pop-neutral';
+    html += `<div class="fx-hit"></div><div class="fx-pop ${kindCls}">${fx.targetText}</div>`;
+  }
+  return html;
 }
 
 function cardTile(teamKey, slotKey, opts){
@@ -444,17 +593,18 @@ function cardTile(teamKey, slotKey, opts){
   else if(isMoveDest) onclick = `onclick="chooseMoveDest('${slotKey}')"`;
   else if(isOwnClickable) onclick = `onclick="selectCard('${teamKey}','${slotKey}')"`;
 
-  const elemIcon = (ELEMENT_META[c.elem] || {}).icon || c.elem;
+  const meta = ELEMENT_META[c.elem] || {};
   const hpPct = Math.round((c.hp/c.maxHp)*100);
   const statusHtml = c.status ? `<span class="status-badge status-${c.status}">${statusLabel(c.status)}</span>` : '';
   const shieldHtml = c.shield>0 ? `<span class="status-badge">盾${c.shield}</span>` : '';
 
   return `<div class="${classes}" ${onclick}>
+    <div class="card-accent" style="background:${meta.accent||'#888'}"></div>
     <div class="card-head">
-      <span class="elem-badge" title="${c.elem}">${elemIcon}</span>
+      <span class="elem-badge" title="${c.elem}">${meta.icon||c.elem}</span>
       <span class="rarity-badge">${c.rarity}</span>
     </div>
-    <div class="card-art">${c.art}</div>
+    <div class="card-art" style="background:${meta.tint||'#eee'}"><svg class="art-svg"><use href="#art-${c.tplId}"></use></svg></div>
     <div class="card-name-row">
       <span class="card-name">${c.name}</span>
       <span class="card-hp">${c.hp}/${c.maxHp}</span>
@@ -471,6 +621,58 @@ function cardTile(teamKey, slotKey, opts){
       </div>
     </div>
     <div class="card-status">${statusHtml}${shieldHtml}</div>
+    ${fxOverlayHtml(teamKey, slotKey)}
+  </div>`;
+}
+
+function skillRowHtml(kind, skill, tag, usable){
+  const detail = skillDetail(skill);
+  const cls = 'skill-row' + (usable ? ' usable' : '');
+  const body = `<div class="skill-body"><span class="skill-name">${skill.name}</span><span class="skill-detail">${detail}</span></div>`;
+  if(usable){
+    return `<button class="${cls}" onclick="chooseSkill('${kind}')"><span class="skill-tag">${tag}</span>${body}</button>`;
+  }
+  return `<div class="${cls}"><span class="skill-tag">${tag}</span>${body}</div>`;
+}
+
+function kingRowHtml(card){
+  return `<div class="skill-row king"><span class="skill-tag">王・自動</span><div class="skill-body"><span class="skill-name">${kingSkillName(card)}</span><span class="skill-detail">${kingSkillDesc(card)}</span></div></div>`;
+}
+
+function buildModalHtml(){
+  if(!state.selected || state.over || state.turn!=='player') return '';
+  const slotKey = state.selected;
+  const c = teams.player.slots[slotKey];
+  if(!c) return '';
+  const role = roleOf(slotKey);
+  const sp = teams.player.sp;
+  const meta = ELEMENT_META[c.elem] || {};
+  const hpPct = Math.round((c.hp/c.maxHp)*100);
+
+  let rows = '';
+  rows += skillRowHtml('frontNormal', c.frontNormal, '前・通常', role==='front' && sp>=c.frontNormal.cost);
+  rows += skillRowHtml('frontSpecial', c.frontSpecial, '前・特殊', role==='front' && sp>=c.frontSpecial.cost);
+  rows += skillRowHtml('back', c.back, '後衛', role==='back' && sp>=c.back.cost);
+  rows += kingRowHtml(c);
+
+  return `<div class="modal-backdrop" onclick="if(event.target===this) cancelSelection()">
+    <div class="modal-card">
+      <div class="modal-accent" style="background:${meta.accent||'#888'}"></div>
+      <button class="modal-close" onclick="cancelSelection()">✕</button>
+      <div class="modal-head">
+        <span class="modal-elem"><span class="elem-badge">${meta.icon||c.elem}</span>${c.elem}属性</span>
+        <span class="rarity-badge">${c.rarity}</span>
+      </div>
+      <div class="modal-art" style="background:${meta.tint||'#eee'}"><svg class="art-svg"><use href="#art-${c.tplId}"></use></svg></div>
+      <div class="modal-name-row">
+        <span class="modal-name">${c.name}</span>
+        <span class="modal-hp">HP ${c.hp}/${c.maxHp}</span>
+      </div>
+      <div class="hpbar-mono modal-hpbar"><div class="hpbar-mono-fill" style="width:${hpPct}%"></div></div>
+      <div class="modal-skills">${rows}</div>
+      <button class="modal-move" ${sp<MOVE_COST?'disabled':''} onclick="startMoveFromModal()">⇄ 移動する(SP${MOVE_COST})</button>
+      <button class="modal-cancel secondary" onclick="cancelSelection()">閉じる</button>
+    </div>
   </div>`;
 }
 
@@ -481,6 +683,7 @@ function render(){
   document.getElementById('playerFront').innerHTML = ['frontL','frontR'].map(k=>cardTile('player',k)).join('');
   document.getElementById('playerBack').innerHTML = ['backL','king','backR'].map(k=>cardTile('player',k)).join('');
   document.getElementById('playerSP').innerHTML = teamSpHtml('player');
+  document.getElementById('cardModalRoot').innerHTML = buildModalHtml();
 
   const logEl = document.getElementById('log');
   logEl.innerHTML = state.log.slice(-30).map(l=>`<div class="${l.important?'important':''}">${l.msg}</div>`).join('');
@@ -505,7 +708,7 @@ function render(){
   }
 
   if(state.moveMode){
-    panel.innerHTML = `<div class="hint">移動先の枠(自分の前衛/後衛)をタップしてください。</div>
+    panel.innerHTML = `<div class="hint">移動先の枠(自分の前衛/後衛)をタップしてください。(SP${MOVE_COST}消費)</div>
       <div class="btn-row"><button class="secondary" onclick="cancelSelection()">キャンセル</button></div>`;
     return;
   }
@@ -516,24 +719,7 @@ function render(){
     return;
   }
 
-  if(state.selected){
-    const c = teams.player.slots[state.selected];
-    const role = roleOf(state.selected);
-    const sp = teams.player.sp;
-    let btns = '';
-    if(role==='front'){
-      btns += `<button ${sp<c.frontNormal.cost?'disabled':''} onclick="chooseSkill('frontNormal')">${c.frontNormal.name}(SP${c.frontNormal.cost})</button>`;
-      btns += `<button ${sp<c.frontSpecial.cost?'disabled':''} onclick="chooseSkill('frontSpecial')">${c.frontSpecial.name}(SP${c.frontSpecial.cost})</button>`;
-    } else {
-      btns += `<button ${sp<c.back.cost?'disabled':''} onclick="chooseSkill('back')">${c.back.name}(SP${c.back.cost})</button>`;
-    }
-    btns += `<button class="move" onclick="startMove()">移動(このターン終了)</button>`;
-    btns += `<button class="secondary" onclick="cancelSelection()">選び直す</button>`;
-    panel.innerHTML = `<div class="hint">${c.name}を選択中(共通SP${sp}/${teams.player.spCap})。行動を選んでください。</div><div class="btn-row">${btns}</div>`;
-    return;
-  }
-
-  panel.innerHTML = `<div class="hint">自分のカードをタップして行動を選んでください。共通SPが残っていれば続けて他のカードも動かせます。</div>`;
+  panel.innerHTML = `<div class="hint">自分のカードをタップすると拡大表示されます。技をタップして発動、共通SPが残っていれば続けて他のカードも動かせます。</div>`;
 }
 
 newGame();
