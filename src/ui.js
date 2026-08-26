@@ -7,6 +7,10 @@ function skillDetail(s){
   const p = [];
   p.push('SP' + s.cost);
   if(s.power > 0) p.push((s.allEnemies ? '全体威' : '威') + s.power);
+  /* 射程は既定と違うときだけ出す(前衛=手前 / 後衛=全域 が既定) */
+  const hitsEnemy = !s.friendly && !s.targetDead;
+  if(hitsEnemy && s.reach === 'any' && s.role === 'front') p.push('全域');
+  if(hitsEnemy && s.reach === 'front' && s.role === 'back') p.push('手前');
   if(s.heal) p.push('回復' + s.heal);
   if(s.healAll) p.push('全体回復' + s.healAll);
   if(s.revive) p.push('蘇生' + Math.round(s.revive.hpPct * 100) + '%');

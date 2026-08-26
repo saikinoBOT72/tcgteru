@@ -218,6 +218,59 @@ osechi:`<rect width="100" height="50" fill="url(#bg-none)"/>
 <circle cx="0" cy="9" r="4" fill="#f2e8d5"/><circle cx="0" cy="9" r="1.8" fill="#8c2f26"/>
 <rect x="11" y="6" width="9" height="7" rx="1" fill="#c9a227"/></g>
 <circle cx="-4" cy="-12" r="1.8" fill="#1a1a1a"/><circle cx="4" cy="-12" r="1.8" fill="#1a1a1a"/></g>`
+,
+
+/* ---- スライム5種(共通のぷるぷる体型を属性ごとに色替え) ---- */
+burnslime:`<rect width="100" height="50" fill="url(#bg-fire)"/>
+<g stroke="#e8a79f" stroke-width="2.2" opacity=".45" fill="none"><path d="M6 8 L15 17 M94 8 L85 17"/></g>
+<g transform="translate(50 27) scale(1)">
+<g fill="#ff9a3c" stroke="#c1471b" stroke-width="1.6">
+<path d="M-7 -19 q3 -8 0 -12 q7 5 5 12 Z"/><path d="M6 -17 q2 -6 0 -9 q6 4 4 9 Z"/></g>
+<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#ef6a4d" stroke="#93301b" stroke-width="2.3"/>
+<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#ffc0ad" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>
+<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
+<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
+<path d="M-5 8 Q0 12 5 8" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
+
+iceslime:`<rect width="100" height="50" fill="url(#bg-ice)"/>
+<g stroke="#9fd2e8" stroke-width="2" opacity=".55" fill="none"><path d="M10 9 v7 M6.5 12.5 h7 M90 34 v7 M86.5 37.5 h7"/></g>
+<g transform="translate(50 27)">
+<g stroke="#cdeaf7" stroke-width="1.8" opacity=".95" fill="none"><path d="M-9 -20 v6 M-12 -17 h6 M8 -22 v5 M5.5 -19.5 h5"/></g>
+<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#8fd0ee" stroke="#2c6f96" stroke-width="2.3"/>
+<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#e2f5ff" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>
+<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
+<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
+<path d="M-5 10 Q0 6 5 10" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
+
+thunderslime:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
+<g fill="#fff" opacity=".6"><circle cx="12" cy="12" r="2.6"/><circle cx="88" cy="36" r="2.6"/></g>
+<g transform="translate(50 27)">
+<path d="M2 -26 L-6 -16 L-1 -16 L-4 -8 L6 -19 L1 -19 Z" fill="#ffe14d" stroke="#8a6a10" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#f3d94e" stroke="#8a6a10" stroke-width="2.3"/>
+<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#fff6c9" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>
+<path d="M-9 2 l4 -4 M9 2 l-4 -4" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+<circle cx="-6" cy="2" r="2.6" fill="#1a1a1a"/><circle cx="6" cy="2" r="2.6" fill="#1a1a1a"/>
+<path d="M-5 9 q5 5 10 -1" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
+
+poisonslime:`<rect width="100" height="50" fill="url(#bg-poison)"/>
+<g stroke="#c0a6dd" stroke-width="1.8" opacity=".5" fill="none"><path d="M7 14 q7 6 0 13 M93 14 q-7 6 0 13"/></g>
+<g transform="translate(50 27)">
+<g fill="#c79bee" stroke="#5d2f8c" stroke-width="1.4" opacity=".95">
+<circle cx="-10" cy="-20" r="3"/><circle cx="4" cy="-23" r="2.2"/><circle cx="12" cy="-18" r="2.6"/></g>
+<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#a86fdc" stroke="#4d2578" stroke-width="2.3"/>
+<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#e2caf7" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>
+<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
+<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
+<path d="M-6 8 q3 4 6 0 q3 4 6 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
+
+normalslime:`<rect width="100" height="50" fill="url(#bg-none)"/>
+<g stroke="#c4c4c4" stroke-width="2" opacity=".6" fill="none"><path d="M8 40 h14 M78 40 h14"/></g>
+<g transform="translate(50 27)">
+<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#c9d2ce" stroke="#5b6864" stroke-width="2.3"/>
+<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#f2f6f4" stroke-width="2.6" stroke-linecap="round" opacity=".95"/>
+<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
+<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
+<path d="M-4 9 h8" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`
 };
 
 /* =========================================================
@@ -227,9 +280,14 @@ osechi:`<rect width="100" height="50" fill="url(#bg-none)"/>
      F(...) = 前衛枠から使うスキル
      B(...) = 後衛枠から使うスキル
    ========================================================= */
-function F(o){ return Object.assign({role:'front', cost:1}, o); }
-function B(o){ return Object.assign({role:'back',  cost:1}, o); }
-function mkSkill(o){ return Object.assign({role:'front', cost:1}, o); }
+/* role  = そのカードがどの枠に置かれている時に使えるか(前衛枠 / 後衛枠)
+   reach = 誰を狙えるか。role とは独立に設定できる
+     'front' … 手前のみ。相手の前衛と、前衛が倒れて空いた穴から露出した枠だけ
+     'any'   … 遮蔽を無視して相手の誰でも
+   既定は F→手前のみ / B→誰でも だが、どちらにも明示指定できる */
+function F(o){ return Object.assign({role:'front', reach:'front', cost:1}, o); }
+function B(o){ return Object.assign({role:'back',  reach:'any',   cost:1}, o); }
+function mkSkill(o){ return Object.assign({role:'front', reach:'front', cost:1}, o); }
 
 /* =========================================================
    カードDB
@@ -333,7 +391,37 @@ const CARD_DB = {
     skills:[ F({name:'祝いの大盤振舞', power:22}),
              F({name:'重箱返し', cost:2, power:34, swapEnemy:true}),
              B({name:'一年の計', cost:2, power:0, friendly:true, healAll:12, cleanse:true}) ],
-    king:{name:'五段重ねの祝', desc:'5枚全員生存で全体+25%', trigger:'fullBoard', value:.25}}
+    king:{name:'五段重ねの祝', desc:'5枚全員生存で全体+25%', trigger:'fullBoard', value:.25}},
+
+  /* ---------------- N:スライム族 ---------------- */
+  burnslime:{name:'燃えてるスライム', elem:'炎', rarity:'N', hp:35,
+    skills:[ F({name:'つつく', power:12}),
+             F({name:'抱きつく', power:9, status:{type:'burn', chance:1}}),
+             B({name:'熱くなれ', power:0, friendly:true, buffTarget:{amount:.15, turns:3}}) ],
+    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
+
+  iceslime:{name:'凍てつくスライム', elem:'氷', rarity:'N', hp:35,
+    skills:[ F({name:'つつく', power:12}),
+             F({name:'冷たい風', power:10, status:{type:'freeze', chance:1}}),
+             B({cost:2, name:'吹雪', power:10, allEnemies:true}) ],
+    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
+
+  thunderslime:{name:'ビリビリスライム', elem:'雷', rarity:'N', hp:35,
+    skills:[ F({name:'つつく', power:11}),
+             F({name:'ビリリ', power:8, status:{type:'paralyze', chance:.5}}),
+             B({name:'ビリリリリリリリ', power:0, status:{type:'paralyze', chance:1}}) ],
+    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
+
+  poisonslime:{name:'毒々しいスライム', elem:'毒', rarity:'N', hp:35,
+    skills:[ F({name:'つつく', power:13}),
+             F({name:'やばい液体', power:10, status:{type:'poison', chance:.5}}),
+             B({name:'こう見えて回復薬', power:0, friendly:true, heal:10}) ],
+    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
+
+  normalslime:{name:'ただのスライム', elem:'無', rarity:'N', hp:35,
+    skills:[ F({name:'つつく', power:12}),
+             B({name:'遠距離の嫌がらせ', power:8, stun:true}) ],
+    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}}
 };
 
 const CARD_IDS = Object.keys(CARD_DB);

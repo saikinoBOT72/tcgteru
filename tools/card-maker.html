@@ -118,7 +118,7 @@ button.act.primary{background:var(--ink); color:var(--ground);}
   <div class="model">
     <b>前衛/後衛でスキルプールは共通</b>。どの効果もどちらの役割にも載せられる。<br>
     枠を「なし」にすればスキルは減らせる(前衛スキル1つだけ、といった変則カードも作れる)。空いた枠はカード上で空欄になる。<br>
-    <b>役割</b>は「そのカードがどの枠に置かれている時に使えるか」。前衛スキルは相手の前衛を殴り、前衛が倒れて空いた穴の奥にいる味方も狙える。後衛スキルは常に誰にでも届く。
+    <b>役割</b>=そのカードがどの枠に置かれている時に使えるか。<b>射程</b>=誰を狙えるか。この2つは独立に選べる。<br><b>手前のみ</b>は相手の前衛と、前衛が倒れて空いた穴から露出した枠だけ。<b>誰でも</b>は遮蔽を無視して相手の誰にでも届く。
   </div>
   <div id="slots"></div>
   <p class="hint">目安:前衛は単純攻撃 / 弱い攻撃+状態異常 / SP2以上の重撃。後衛はSP回復や支援。全体攻撃はロスター全体で少数に。</p>
@@ -207,9 +207,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 
 /* 3枠ぶんの状態 */
 const slots = [
-  {on:true,  role:'front', name:'だし巻きアタック', cost:1, eff:'attack',       st:'burn'},
-  {on:true,  role:'front', name:'あまから包み',     cost:1, eff:'attackStatus', st:'burn'},
-  {on:true,  role:'back',  name:'やさしい出汁',     cost:1, eff:'gainSP',       st:'poison'}
+  {on:true,  role:'front', reach:'front', name:'だし巻きアタック', cost:1, eff:'attack',       st:'burn'},
+  {on:true,  role:'front', reach:'front', name:'あまから包み',     cost:1, eff:'attackStatus', st:'burn'},
+  {on:true,  role:'back',  reach:'any',   name:'やさしい出汁',     cost:1, eff:'gainSP',       st:'poison'}
 ];
 
 Object.keys(ELEM).forEach(e => $('f_elem').add(new Option(e,e)));
@@ -238,7 +238,11 @@ function renderSlots(){
         ${s.on ? `<div class="seg">
           <button class="${s.role==='front'?'on':''}" onclick="setRole(${i},'front')">前衛</button>
           <button class="${s.role==='back'?'on':''}" onclick="setRole(${i},'back')">後衛</button>
-        </div>` : ''}
+        </div>
+        ${EFFECTS[s.eff].friendly||EFFECTS[s.eff].dead ? '' : `<div class="seg">
+          <button class="${s.reach==='front'?'on':''}" onclick="setReach(${i},'front')" title="相手の前衛と、穴から露出した枠だけ">手前のみ</button>
+          <button class="${s.reach==='any'?'on':''}" onclick="setReach(${i},'any')" title="遮蔽を無視して誰でも">誰でも</button>
+        </div>`}` : ''}
       </div>
       ${s.on ? `<div class="row">
         <div style="flex:2"><label>技名</label><input value="${esc(s.name)}" oninput="setName(${i},this.value)"></div>
@@ -254,6 +258,7 @@ function renderSlots(){
 }
 function setOn(i,v){ slots[i].on = v; renderSlots(); update(); }
 function setRole(i,v){ slots[i].role = v; renderSlots(); update(); }
+function setReach(i,v){ slots[i].reach = v; renderSlots(); update(); }
 function setName(i,v){ slots[i].name = v; update(); }
 function setCost(i,v){ slots[i].cost = +v; update(); }
 function setEff(i,v){ slots[i].eff = v; Object.keys(slots[i]).forEach(k=>{ if(k.startsWith('p_')) delete slots[i][k]; }); renderSlots(); update(); }
@@ -280,6 +285,8 @@ function buildSkill(s){
 
   const hasPower = def.p.some(d => d.k === 'power');
   o.power = hasPower ? g('power') : 0;
+  const defaultReach = s.role === 'front' ? 'front' : 'any';
+  if(!def.friendly && !def.dead && s.reach && s.reach !== defaultReach) o.reach = s.reach;
   if(def.all) o.allEnemies = true;
   if(def.friendly) o.friendly = true;
   if(def.dead) o.targetDead = true;
@@ -307,9 +314,13 @@ function build(){
 }
 
 /* ---- ゲーム本体と同じ短縮表記 ---- */
-function detail(s){
+function detail(s, role){
   const p = ['SP'+(s.cost||1)];
   if(s.power > 0) p.push((s.allEnemies?'全体威':'威')+s.power);
+  const hitsEnemy = !s.friendly && !s.targetDead;
+  const r = s.reach || (role === 'front' ? 'front' : 'any');
+  if(hitsEnemy && r === 'any'   && role === 'front') p.push('全域');
+  if(hitsEnemy && r === 'front' && role === 'back')  p.push('手前');
   if(s.heal) p.push('回復'+s.heal);
   if(s.healAll) p.push('全体回復'+s.healAll);
   if(s.revive) p.push('蘇生'+Math.round(s.revive.hpPct*100)+'%');
@@ -336,7 +347,7 @@ function preview(c){
     if(!e) return '<div class="sk empty"></div>';
     return `<div class="sk"><span class="sk-tag">${e.role==='front'?'前':'後'}</span>
       <span class="sk-body"><span class="sk-name">${esc(e.skill.name)}</span>
-      <span class="sk-detail">${esc(detail(e.skill))}</span></span></div>`;
+      <span class="sk-detail">${esc(detail(e.skill, e.role))}</span></span></div>`;
   }).join('');
   $('prev').innerHTML =
     `<div class="c-accent" style="background:${rf}"></div>
@@ -422,6 +433,7 @@ function randomize(){
     s.on = i < count;
     s.role = Math.random() < .6 ? 'front' : 'back';
     s.eff = keys[Math.floor(Math.random()*keys.length)];
+    s.reach = Math.random() < .5 ? 'front' : 'any';
     s.cost = Math.random() < .25 ? 2 : 1;
     Object.keys(s).forEach(k => { if(k.startsWith('p_')) delete s[k]; });
   });

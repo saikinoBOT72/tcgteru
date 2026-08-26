@@ -244,7 +244,9 @@ function validTargets(tk, slotKey, skill){
   if(skill.targetDead) return {teamKey:tk, slots:deadSlots(tk)};
   if(skill.friendly)   return {teamKey:tk, slots:aliveSlots(tk)};
   const opp = foe(tk);
-  if(skill.role === 'front'){
+  /* 狙える範囲は role ではなく reach で決まる。
+     'front' なら遮蔽に従い、'any' なら遮蔽を無視して誰でも。 */
+  if(skill.reach === 'front'){
     const fronts = aliveSlots(opp, k => roleOf(k) === 'front');
     return {teamKey:opp, slots: fronts.concat(exposedSlots(opp))};
   }
@@ -350,8 +352,9 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
 
   if(skill.power > 0 && target){
     if(skill.allEnemies){
-      /* 全体攻撃: 生存している敵全員に同威力 */
-      aliveSlots(tTk).forEach(k => {
+      /* 全体攻撃: reach で届く範囲の全員に同威力
+         (reach:'any' なら敵全員、'front' なら前衛と露出枠だけを薙ぐ) */
+      validTargets(atkTk, slotKey, skill).slots.forEach(k => {
         const isMain = k === tSlot;
         dealDamage(atkTk, card, tTk, k, skill.power, isMain ? fx : null);
         if(!isMain) queueFx({target:{team:tTk, slot:k}, targetText:'-' + skill.power, targetKind:'damage', noProjectile:true});
@@ -398,7 +401,7 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
     fx.statusText = '攻ダウン';
   }
   if(skill.debuffAll){
-    aliveSlots(tTk).forEach(k => {
+    validTargets(atkTk, slotKey, skill).slots.forEach(k => {
       const c2 = teams[tTk].slots[k];
       c2.atkBuff = -skill.debuffAll.amount;
       c2.atkBuffTurns = skill.debuffAll.turns;
