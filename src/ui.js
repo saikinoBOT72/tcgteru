@@ -44,8 +44,14 @@ function spHtml(tk){
    skill が無い枠は空欄のまま描く(スキル数が3未満のカード用)。
    タグは枠の位置ではなく skill.role から出すので、前衛2/後衛1 でも
    前衛1/後衛2 でも正しく「前」「後」が並ぶ。 */
-function skRow(skill, ctx){
+function skRow(skill, ctx, locked, lvNeed){
   if(!skill) return '<div class="sk empty"></div>';
+  if(locked){
+    return `<div class="sk locked">
+      <span class="sk-tag">${lvNeed}</span>
+      <span class="sk-body"><span class="sk-name">${skill.name}</span>
+      <span class="sk-detail">Lv${lvNeed}で解放</span></span></div>`;
+  }
   const usable = !!(ctx && ctx.usable);
   const tag = skill.role === 'front' ? '前' : '後';
   return `<div class="sk${usable ? ' usable' : ''}"${usable ? ` onclick="event.stopPropagation();activateSkill('${ctx.tk}','${ctx.sk}',${ctx.idx})"` : ''}>
@@ -54,7 +60,11 @@ function skRow(skill, ctx){
     ${usable ? '<span class="sk-go">▶</span>' : ''}
   </div>`;
 }
-function kingRow(k){
+function kingRow(k, lv){
+  if(!kingActive(lv)){
+    return `<div class="sk king locked"><span class="sk-tag">${MAX_LV}</span><span class="sk-body">
+      <span class="sk-name">${k.name}</span><span class="sk-detail">Lv${MAX_LV}で解放</span></span></div>`;
+  }
   return `<div class="sk king"><span class="sk-tag">王</span><span class="sk-body">
     <span class="sk-name">${k.name}</span><span class="sk-detail">${k.desc}</span></span></div>`;
 }
@@ -67,9 +77,11 @@ function cardFaceHtml(c, role, ctx){
   const rar = RARITY[c.rarity] || RARITY.N;
   const live = ctx && teams && state;
 
+  const lv = c.lv || MAX_LV;
   const rows = [0,1,2].map(i => {
     const skill = c.skills ? c.skills[i] : null;
     if(!skill) return skRow(null, null);
+    if(!skillUnlocked(lv, i)) return skRow(skill, null, true, unlockLv(i));
     let cx = null;
     if(live){
       const usable = ctx.tk === 'player' && state.turn === 'player' && !state.over
@@ -85,29 +97,30 @@ function cardFaceHtml(c, role, ctx){
     && role !== 'king' && c.alive && !state.pendingAction && !state.moveMode
     && (teams.player.freeMove || teams.player.sp >= MOVE_COST);
 
+  /* 状態は「何が・どれだけ・あと何ターン」まで出す */
   const st = [];
   if(live){
-    if(c.status) st.push(`<span class="st ${c.status}">${statusLabel(c.status)}</span>`);
-    if(c.sealed > 0) st.push(`<span class="st">封印</span>`);
-    if(c.stunned > 0) st.push(`<span class="st">スタン</span>`);
-    if(c.atkBuff > 0) st.push(`<span class="st up">攻+</span>`);
-    if(c.atkBuff < 0) st.push(`<span class="st down">攻-</span>`);
+    if(c.status) st.push(`<span class="st ${c.status}">${statusLabel(c.status)}<b>${c.statusTurns}T</b></span>`);
+    if(c.sealed > 0) st.push(`<span class="st seal">封印<b>${c.sealed}T</b></span>`);
+    if(c.stunned > 0) st.push(`<span class="st seal">スタン</span>`);
+    if(c.atkBuff > 0) st.push(`<span class="st up">攻+${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
+    if(c.atkBuff < 0) st.push(`<span class="st down">攻${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
   }
 
   return `<div class="c-accent" style="background:${rar.frame}"></div>
     <div class="c-head" style="background:linear-gradient(180deg,${meta.accent}22,${meta.accent}44)">
-      <span class="c-elem" style="background:${meta.accent}">${meta.icon}</span>
+      <span class="c-elem" style="background:${meta.accent}"><svg viewBox="0 0 24 24" fill="#fff" stroke="none">${meta.svg}</svg></span>
       <span class="c-name">${c.name}</span>
       <span class="c-rarity" style="border-color:${rar.frame};color:${rar.frame}">${c.rarity}</span>
     </div>
-    <div class="c-art"><svg class="art"><use href="#art-${c.tplId}"/></svg></div>
+    <div class="c-art"><svg class="art"><use href="#art-${c.tplId}"/></svg><span class="c-lv">Lv${lv}</span></div>
     <div class="c-stat">
       <span class="c-role${role === 'king' ? ' king' : ''}">${roleLabel(role)}</span>
       ${role !== 'king' ? `<span class="c-move${canMove ? ' usable' : ''}"${canMove ? ` onclick="event.stopPropagation();startMoveSource('${ctx.tk}','${ctx.sk}')"` : ''}>⇄</span>` : ''}
       <span class="c-hp">${c.hp}/${c.maxHp}</span>
     </div>
     <div class="c-hpbar"><i style="width:${Math.round(c.hp / c.maxHp * 100)}%"></i></div>
-    <div class="c-skills">${rows}${kingRow(c.king)}</div>
+    <div class="c-skills">${rows}${kingRow(c.king, lv)}</div>
     ${st.length ? `<div class="c-status">${st.join('')}</div>` : ''}`;
 }
 
@@ -161,11 +174,13 @@ function render(){
 
   document.getElementById('endTurnBtn').disabled = state.over || state.turn !== 'player';
 
-  const verdict = state.winner === 'player' ? '🏆 あなたの勝利!'
-                : state.winner === 'enemy'  ? '💀 敗北…'
-                : '🤝 引き分け';
+  const vKind = state.winner === 'player' ? 'win' : state.winner === 'enemy' ? 'lose' : 'draw';
+  const verdict = state.winner === 'player' ? 'あなたの勝利'
+                : state.winner === 'enemy'  ? '敗北'
+                : '引き分け';
   document.getElementById('ovlRoot').innerHTML = state.over
-    ? `<div class="ovl"><div class="ovl-card"><h2>${verdict}</h2>
+    ? `<div class="ovl"><div class="ovl-card ${vKind}"><h2>${verdict}</h2>
+       <p class="sub">${teams.player.turnCount} turns</p>
        <div style="display:flex;gap:8px;justify-content:center;">
          <button onclick="startCpuBattle()">もう一度</button>
          <button onclick="showScreen('home')">ホームへ</button>
@@ -188,36 +203,59 @@ function buildArtDefs(){
 }
 
 /* =========================================================
-   所持カード / デッキ
-   ガチャ未実装のため、現状は全カード所持として扱う
+   所持カード / デッキ / Lv
+   ガチャ未実装のため、現状は全カードを所持している扱い。
+   ガチャで同じカードが被るとLvが上がる想定なので、それまでは
+   編成画面のLvボタンで手動に上げ下げして挙動を確認できる。
    ========================================================= */
 const SLOT_ORDER = ['frontL','frontR','backL','backR','king'];
-const DEFAULT_DECK = ['karai','soda','kaki','natto','onigiri'];
-const DECK_KEY = 'tcgteru.deck.v1';
+const DEFAULT_DECK = ['ramen','cider','pudding','nuka','rice'];
+const DECK_KEY = 'tcgteru.deck.v2';
+const LV_KEY   = 'tcgteru.levels.v1';
 
 function ownedCards(){ return CARD_IDS.slice(); }
 
 let playerDeck = DEFAULT_DECK.slice();
-let deckSelSlot = 0;   // 編成画面で選択中のスロット index
+let cardLevels = {};              // id -> 1..4
+let deckSelSlot = 0;
 
-function loadDeck(){
+function lvOf(id){ return cardLevels[id] || MAX_LV; }
+
+function loadState(){
   try{
     const raw = localStorage.getItem(DECK_KEY);
     if(raw){
       const a = JSON.parse(raw);
-      if(Array.isArray(a) && a.length === 5 && a.every(id => CARD_DB[id])) return a;
+      if(Array.isArray(a) && a.length === 5 && a.every(id => CARD_DB[id])) playerDeck = a;
     }
-  }catch(e){ /* プライベートモード等では黙って既定デッキ */ }
-  return DEFAULT_DECK.slice();
+  }catch(e){}
+  try{
+    const raw = localStorage.getItem(LV_KEY);
+    if(raw){
+      const o = JSON.parse(raw);
+      if(o && typeof o === 'object'){
+        Object.keys(o).forEach(k => {
+          if(CARD_DB[k]) cardLevels[k] = Math.min(MAX_LV, Math.max(1, o[k] | 0));
+        });
+      }
+    }
+  }catch(e){}
 }
-function saveDeck(){
+function saveState(){
   try{ localStorage.setItem(DECK_KEY, JSON.stringify(playerDeck)); }catch(e){}
+  try{ localStorage.setItem(LV_KEY, JSON.stringify(cardLevels)); }catch(e){}
 }
+
+/* 出撃編成を {id, lv} の形にして渡す */
+function deckEntries(){ return playerDeck.map(id => ({id, lv:lvOf(id)})); }
 
 function randomDeck(){
   const pool = ownedCards().slice();
   const out = [];
-  for(let i = 0; i < 5; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  for(let i = 0; i < 5; i++){
+    const id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    out.push({id, lv:MAX_LV});
+  }
   return out;
 }
 
@@ -236,25 +274,32 @@ function showScreen(name){
   if(name === 'battle') render();
 }
 
+/* 属性の丸アイコン(絵文字は使わず自前SVG) */
+function elemDot(e, size){
+  const m = ELEM[e];
+  return `<span class="edot" style="background:${m.accent};width:${size}px;height:${size}px">
+    <svg viewBox="0 0 24 24" fill="#fff" stroke="none">${m.svg}</svg></span>`;
+}
+
 /* ---- ホーム ---- */
 function miniCardHtml(id){
   const c = CARD_DB[id];
   return `<div class="mini"><div class="mart"><svg><use href="#art-${id}"/></svg></div>
-    <div class="mname">${c.name}</div></div>`;
+    <div class="mname">${c.name}</div><div class="mlv">Lv${lvOf(id)}</div></div>`;
 }
 
 function renderHome(){
   document.getElementById('screenHome').innerHTML = `
     <h1 class="home-title">食卓バトル</h1>
-    <p class="home-sub">β — 陣形とSPで戦う食卓TCG</p>
-    <div class="home-crest">${ELEMENTS.map(e => `<span style="background:${ELEM[e].accent}33">${ELEM[e].icon}</span>`).join('')}</div>
+    <p class="home-sub">陣形とSPで戦う食卓TCG</p>
+    <div class="home-crest">${ELEMENTS.map(e => elemDot(e, 30)).join('')}</div>
     <div class="home-menu">
       <button class="menu-btn primary" onclick="startCpuBattle()">
-        <span class="mi">⚔️</span><span>CPUとバトル<span class="msub">今の編成でたたかう</span></span></button>
+        CPUとバトル<span class="msub">今の編成でたたかう</span></button>
       <button class="menu-btn" onclick="showScreen('deck')">
-        <span class="mi">🃏</span><span>デッキ編成<span class="msub">所持 ${ownedCards().length} 枚から5枚を配置</span></span></button>
+        デッキ編成<span class="msub">所持 ${ownedCards().length} 枚から5枚を配置</span></button>
       <button class="menu-btn" disabled>
-        <span class="mi">🎰</span><span>ガチャ<span class="msub">準備中</span></span></button>
+        ガチャ<span class="msub">準備中 — 被るとカードのLvが上がる予定</span></button>
     </div>
     <div class="home-deck">
       <span class="home-deck-label">現在の編成</span>
@@ -271,21 +316,27 @@ function slotHtml(i){
   const role = roleLabel(roleOf(SLOT_ORDER[i]));
   return `<div class="slot${sel}" onclick="selectDeckSlot(${i})">
     <div class="srole">${role}</div>
-    ${c ? `<div class="sart"><svg><use href="#art-${id}"/></svg></div><div class="sname">${c.name}</div>`
+    ${c ? `<div class="sart"><svg><use href="#art-${id}"/></svg></div>
+           <div class="sname">${c.name}</div><div class="slv">Lv${lvOf(id)}</div>`
         : `<div class="sempty">未設定</div><div class="sname">—</div>`}
   </div>`;
 }
 
 function renderDeck(){
-  const owned = ownedCards();
-  const list = owned.map(id => {
+  const list = ownedCards().map(id => {
     const at = playerDeck.indexOf(id);
-    const inst = createCard(id);
+    const inst = createCard(id, lvOf(id));
     const role = at >= 0 ? roleOf(SLOT_ORDER[at]) : 'front';
     const placedCls = at >= 0 ? ' placed' : '';
     const tag = at >= 0 ? `<span class="placed-tag">${roleLabel(roleOf(SLOT_ORDER[at]))}</span>` : '';
-    return `<div class="card-tile${placedCls}" onclick="assignCard('${id}')">
-      ${cardFaceHtml(inst, role)}${tag}</div>`;
+    return `<div class="deck-item">
+      <div class="card-tile${placedCls}" onclick="assignCard('${id}')">${cardFaceHtml(inst, role)}${tag}</div>
+      <div class="lv-ctl">
+        <button ${lvOf(id) <= 1 ? 'disabled' : ''} onclick="event.stopPropagation();bumpLv('${id}',-1)">−</button>
+        <span>Lv${lvOf(id)}</span>
+        <button ${lvOf(id) >= MAX_LV ? 'disabled' : ''} onclick="event.stopPropagation();bumpLv('${id}',1)">＋</button>
+      </div>
+    </div>`;
   }).join('');
 
   const selName = CARD_DB[playerDeck[deckSelSlot]] ? CARD_DB[playerDeck[deckSelSlot]].name : '未設定';
@@ -307,30 +358,46 @@ function renderDeck(){
 
 function selectDeckSlot(i){ deckSelSlot = i; renderDeck(); }
 
-function assignCard(id){
-  const existing = playerDeck.indexOf(id);
-  if(existing === deckSelSlot) return;
-  if(existing >= 0){
-    // 既に別枠にいるカードなら入れ替え(同じカードが2枚並ばないように)
-    playerDeck[existing] = playerDeck[deckSelSlot];
-  }
-  playerDeck[deckSelSlot] = id;
-  saveDeck();
+function bumpLv(id, d){
+  cardLevels[id] = Math.min(MAX_LV, Math.max(1, lvOf(id) + d));
+  saveState();
   renderDeck();
 }
 
-/* ---- バトル開始 ---- */
+function assignCard(id){
+  const existing = playerDeck.indexOf(id);
+  if(existing === deckSelSlot) return;
+  if(existing >= 0) playerDeck[existing] = playerDeck[deckSelSlot];
+  playerDeck[deckSelSlot] = id;
+  saveState();
+  renderDeck();
+}
+
+/* ---- アート/グラデーションの defs ---- */
+function buildArtDefs(){
+  const grads = Object.keys(ELEM).map(e => {
+    const m = ELEM[e];
+    return `<radialGradient id="bg-${m.id}" cx="50%" cy="42%">
+      <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="${m.accent}52"/></radialGradient>`;
+  }).join('');
+  const syms = Object.keys(ART).map(id =>
+    `<symbol id="art-${id}" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">${ART[id]}</symbol>`
+  ).join('');
+  document.getElementById('artDefs').innerHTML = `<defs>${grads}${syms}</defs>`;
+}
+
+/* ---- バトル開始 / 起動 ---- */
 function startCpuBattle(){
   document.getElementById('fxLayer').innerHTML = '';
   fxQueue = [];
-  newBattle(playerDeck, randomDeck());
+  newBattle(deckEntries(), randomDeck());
   startTurn('player');
   showScreen('battle');
 }
 
 function boot(){
   buildArtDefs();
-  playerDeck = loadDeck();
+  loadState();
   showScreen('home');
 }
 

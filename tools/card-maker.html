@@ -56,11 +56,12 @@ input:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px; bo
   border:1.5px solid #000; border-radius:.6em; box-shadow:0 1px 0 rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.06);}
 .c-accent{flex:0 0 auto; height:.28em;}
 .c-head{flex:0 0 auto; height:1.95em; display:flex; align-items:center; gap:.25em; padding:0 .3em; border-bottom:1px solid #000;}
-.c-elem{width:1.5em; height:1.5em; border-radius:50%; border:1px solid #000; display:flex; align-items:center; justify-content:center; font-size:.95em; flex:0 0 auto; box-shadow:inset 0 -.15em .2em rgba(0,0,0,.18);}
+.c-elem{width:1.5em; height:1.5em; border-radius:50%; border:1px solid #000; display:flex; align-items:center; justify-content:center; flex:0 0 auto; box-shadow:inset 0 -.15em .2em rgba(0,0,0,.18);}
+.c-elem svg{width:68%; height:68%; display:block;}
 .c-name{flex:1 1 auto; min-width:0; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:.95em; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.02em;}
 .c-rarity{flex:0 0 auto; font-size:.72em; font-weight:900; border:1.5px solid #000; border-radius:.25em; padding:0 .28em; line-height:1.3;}
 .c-art{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; border-bottom:1px solid #000; display:flex; align-items:center; justify-content:center;}
-.c-art .ph{font-size:2.2em;}
+.c-art .ph{font-size:.8em; font-weight:900; letter-spacing:.18em; color:rgba(0,0,0,.28);}
 .c-art::after{content:''; position:absolute; inset:0; background:linear-gradient(115deg,rgba(255,255,255,0) 43%,rgba(255,255,255,.34) 50%,rgba(255,255,255,0) 57%);}
 .c-stat{flex:0 0 auto; height:1.35em; display:flex; align-items:center; gap:.22em; padding:0 .3em;}
 .c-role{font-size:.68em; font-weight:900; border:1px solid #000; border-radius:.25em; padding:0 .3em; line-height:1.4;}
@@ -114,10 +115,12 @@ button.act.primary{background:var(--ink); color:var(--ground);}
 </fieldset>
 
 <fieldset>
-  <legend>スキル(最大3枠・王スキル除く)</legend>
+  <legend>スキル(3枠 + 王スキル)</legend>
   <div class="model">
     <b>前衛/後衛でスキルプールは共通</b>。どの効果もどちらの役割にも載せられる。<br>
-    枠を「なし」にすればスキルは減らせる(前衛スキル1つだけ、といった変則カードも作れる)。空いた枠はカード上で空欄になる。<br>
+    <b>Lvで上から順に解放される</b>:Lv1=枠1のみ / Lv2=枠2まで / Lv3=枠3まで / <b>Lv4で王スキル</b>。
+    そのため<b>枠1は前衛スキルにする</b>(Lv1で唯一使える枠のため)。<br>
+    枠を「なし」にすればスキルは減らせるが、その場合そのLvでは解放するものが無くなる。<br>
     <b>役割</b>=そのカードがどの枠に置かれている時に使えるか。<b>射程</b>=誰を狙えるか。この2つは独立に選べる。<br><b>手前のみ</b>は相手の前衛と、前衛が倒れて空いた穴から露出した枠だけ。<b>誰でも</b>は遮蔽を無視して相手の誰にでも届く。
   </div>
   <div id="slots"></div>
@@ -157,8 +160,13 @@ button.act.primary{background:var(--ink); color:var(--ground);}
 </div>
 
 <script>
-const ELEM = {'炎':{icon:'🔥',accent:'#e2483f'},'氷':{icon:'❄️',accent:'#4f96c2'},
-  '毒':{icon:'☠️',accent:'#8e5cc9'},'雷':{icon:'⚡',accent:'#c9a227'},'無':{icon:'⚪',accent:'#8d8d8d'}};
+const ELEM = {
+  '炎':{accent:'#d1462f', svg:'<path d="M12 2c1.2 4.2-2.8 5.2-2.8 9a2.8 2.8 0 0 0 5.6 0c0-1-.8-1.9-.8-2.8 2 1.1 3.9 3.2 3.9 6A7.9 7.9 0 0 1 4 14.2C4 8.6 10.6 7.8 12 2z"/>'},
+  '氷':{accent:'#2f7fae', svg:'<g stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M12 6.4 9.9 4.6M12 6.4l2.1-1.8M12 17.6l-2.1 1.8M12 17.6l2.1 1.8"/></g>'},
+  '毒':{accent:'#7b40b5', svg:'<path d="M12 2.6c3.4 4.4 6.2 7.2 6.2 10.6a6.2 6.2 0 0 1-12.4 0C5.8 9.8 8.6 7 12 2.6z"/><circle cx="9.7" cy="13" r="1.5" fill="#fff"/><circle cx="14.3" cy="13" r="1.5" fill="#fff"/>'},
+  '雷':{accent:'#b8901a', svg:'<path d="M13.4 2 4.6 13.4h5.2L8.9 22l9.1-11.9h-5.3z"/>'},
+  '無':{accent:'#71807a', svg:'<circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="2.4"/>'}
+};
 const RARITY = {N:'#8d8d8d', R:'#3f7fc2', SR:'#c9a227', UR:'#9b3fc2'};
 const STATUS = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
 
@@ -175,7 +183,7 @@ const EFFECTS = {
   reflect:      {label:'自分の状態異常を敵に移す', p:[{k:'power',l:'威力(0可)',v:0}], flag:'reflectStatus'},
   heal:         {label:'味方1体を回復', p:[{k:'heal',l:'回復量',v:14}], friendly:true},
   healAll:      {label:'味方全体を回復', p:[{k:'healAll',l:'回復量',v:10}], friendly:true},
-  gainSP:       {label:'チームSPを回復', p:[{k:'gainSP',l:'回復量',v:2}], friendly:true},
+  gainSP:       {label:'チームSPを回復(1ターン1回)', p:[{k:'gainSP',l:'回復量',v:2}], friendly:true, once:true},
   buffTarget:   {label:'味方1体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffTarget'},
   buffAll:      {label:'味方全体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffAll'},
   cleanse:      {label:'味方1体の状態異常を治療', p:[], friendly:true, flag:'cleanse'},
@@ -291,6 +299,7 @@ function buildSkill(s){
   if(def.friendly) o.friendly = true;
   if(def.dead) o.targetDead = true;
   if(def.flag) o[def.flag] = true;
+  if(def.once) o.oncePerTurn = true;
   if(def.status) o.status = {type:s.st, chance:g('chance')/100};
   if(def.wrap === 'revive') o.revive = {hpPct:g('hpPct')/100};
   else if(def.wrap) o[def.wrap] = {amount:g('amount')/100, turns:g('turns')};
@@ -352,10 +361,10 @@ function preview(c){
   $('prev').innerHTML =
     `<div class="c-accent" style="background:${rf}"></div>
      <div class="c-head" style="background:linear-gradient(180deg,${m.accent}22,${m.accent}44)">
-       <span class="c-elem" style="background:${m.accent}">${m.icon}</span>
+       <span class="c-elem" style="background:${m.accent}"><svg viewBox="0 0 24 24" fill="#fff" stroke="none">${m.svg}</svg></span>
        <span class="c-name">${esc(c.name)}</span>
        <span class="c-rarity" style="border-color:${rf};color:${rf}">${c.rarity}</span></div>
-     <div class="c-art" style="background:${m.accent}1f"><span class="ph">🍳</span></div>
+     <div class="c-art" style="background:${m.accent}1f"><span class="ph">ART</span></div>
      <div class="c-stat"><span class="c-role">前衛</span><span class="c-hp">${c.hp}/${c.hp}</span></div>
      <div class="c-hpbar"><i></i></div>
      <div class="c-skills">${rows}
@@ -369,7 +378,11 @@ function checks(c){
   if(c.list.length === 0) w.push('スキルが1つもない。最低1枠は有効にする');
   const fronts = c.list.filter(e => e.role === 'front');
   const backs  = c.list.filter(e => e.role === 'back');
+  if(c.list[0] && c.list[0].role !== 'front') w.push('枠1は前衛スキルにする(Lv1ではこの枠しか使えないため)');
+  if(c.list.length < 3) w.push('スキルが3つ未満。Lv' + (c.list.length + 1) + '以降に解放するものが無くなる');
   if(fronts.length === 0) w.push('前衛スキルが無いので、前衛枠に置くと何もできない(意図的なら問題なし)');
+  if(c.list.some(e => e.skill.gainSP) && !c.list.some(e => e.skill.gainSP && e.skill.oncePerTurn))
+    w.push('SP回復スキルは oncePerTurn を付けないと同一ターンに撃ち続けられて無限SPになる');
   if(backs.length === 0)  w.push('後衛スキルが無いので、後衛枠に置くと何もできない(意図的なら問題なし)');
   if(c.list.some(e => e.skill.allEnemies)) w.push('全体攻撃はロスター全体で少数に留める設計。現行15枚では2枚だけ');
   fronts.forEach(e => {

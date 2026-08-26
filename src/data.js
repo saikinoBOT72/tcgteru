@@ -1,24 +1,28 @@
 /* =========================================================
-   data.js — 属性 / レアリティ / カードアート / カードDB
-   企画書 5章(属性)6章(レアリティ)7章(スキルプール)8章(サンプル)
+   data.js — 属性 / レアリティ / Lv / カードアート / カードDB
    ========================================================= */
 
 const ELEMENTS = ['炎', '氷', '毒', '雷', '無'];
 
+/* 属性アイコンは絵文字を使わず、すべて自前のSVGグリフで描く */
 const ELEM = {
-  '炎': {icon:'🔥', accent:'#e2483f', id:'fire'},
-  '氷': {icon:'❄️', accent:'#4f96c2', id:'ice'},
-  '毒': {icon:'☠️', accent:'#8e5cc9', id:'poison'},
-  '雷': {icon:'⚡', accent:'#c9a227', id:'bolt'},
-  '無': {icon:'⚪', accent:'#8d8d8d', id:'none'}
+  '炎': {accent:'#d1462f', id:'fire',
+    svg:'<path d="M12 2c1.2 4.2-2.8 5.2-2.8 9a2.8 2.8 0 0 0 5.6 0c0-1-.8-1.9-.8-2.8 2 1.1 3.9 3.2 3.9 6A7.9 7.9 0 0 1 4 14.2C4 8.6 10.6 7.8 12 2z"/>'},
+  '氷': {accent:'#2f7fae', id:'ice',
+    svg:'<g stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M12 6.4 9.9 4.6M12 6.4l2.1-1.8M12 17.6l-2.1 1.8M12 17.6l2.1 1.8"/></g>'},
+  '毒': {accent:'#7b40b5', id:'poison',
+    svg:'<path d="M12 2.6c3.4 4.4 6.2 7.2 6.2 10.6a6.2 6.2 0 0 1-12.4 0C5.8 9.8 8.6 7 12 2.6z"/><circle cx="9.7" cy="13" r="1.5" fill="#fff"/><circle cx="14.3" cy="13" r="1.5" fill="#fff"/>'},
+  '雷': {accent:'#b8901a', id:'bolt',
+    svg:'<path d="M13.4 2 4.6 13.4h5.2L8.9 22l9.1-11.9h-5.3z"/>'},
+  '無': {accent:'#71807a', id:'none',
+    svg:'<circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="2.4"/>'}
 };
 
-/* ---- 属性相性表(企画書TODOの確定版) --------------------
+/* ---- 属性相性表 --------------------------------------------
    4すくみ: 炎→氷→毒→雷→炎 が有利(1.2倍)
-   その逆流しは軽減(0.8倍)、同属性も軽減(0.8倍)
-   「無」は攻守ともに常に等倍 = 安定枠
-   0倍(無効)は基礎相性では使わず、王スキル(属性無効)専用の枠とする
-   ---------------------------------------------------------- */
+   逆流しと同属性は軽減(0.8倍)、無は攻守とも常に等倍
+   0倍(無効)は基礎相性では使わず、王スキル専用の枠
+   ------------------------------------------------------------ */
 const AFFINITY = {
   '炎': {'炎':0.8, '氷':1.2, '毒':1.0, '雷':0.8, '無':1.0},
   '氷': {'炎':0.8, '氷':0.8, '毒':1.2, '雷':1.0, '無':1.0},
@@ -26,402 +30,239 @@ const AFFINITY = {
   '雷': {'炎':1.2, '氷':1.0, '毒':0.8, '雷':0.8, '無':1.0},
   '無': {'炎':1.0, '氷':1.0, '毒':1.0, '雷':1.0, '無':1.0}
 };
-
-function affinityMult(atkElem, defElem){
-  const row = AFFINITY[atkElem];
-  return row && row[defElem] !== undefined ? row[defElem] : 1.0;
+function affinityMult(a, d){
+  const row = AFFINITY[a];
+  return row && row[d] !== undefined ? row[d] : 1.0;
 }
 
-/* ---- レアリティ ---- */
 const RARITY = {
-  N : {label:'N',  rank:0, frame:'#8d8d8d', gachaWeight:74},
-  R : {label:'R',  rank:1, frame:'#3f7fc2', gachaWeight:20},
-  SR: {label:'SR', rank:2, frame:'#c9a227', gachaWeight:5},
-  UR: {label:'UR', rank:3, frame:'#9b3fc2', gachaWeight:1}
+  N : {label:'N',  rank:0, frame:'#71807a', gachaWeight:74},
+  R : {label:'R',  rank:1, frame:'#2f6ba8', gachaWeight:20},
+  SR: {label:'SR', rank:2, frame:'#b8901a', gachaWeight:5},
+  UR: {label:'UR', rank:3, frame:'#8331ad', gachaWeight:1}
 };
 
 const STATUS_LABEL = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺', stun:'スタン', seal:'封印'};
 
 /* =========================================================
-   カードアート(viewBox 0 0 100 50 の symbol 中身)
+   Lv システム
+   Lv1..4。ガチャで同じカードが被るとLvが上がる(ガチャ未実装)。
+   カードは必ず「通常スキル3つ + 王スキル1つ = 計4つ」を持ち、
+   上から順に解放される:
+     Lv1 … スキル1(必ず前衛スキル)
+     Lv2 … スキル2 まで
+     Lv3 … スキル3 まで
+     Lv4 … 王スキルも起動する
    ========================================================= */
-const ART = {
-karai:`<rect width="100" height="50" fill="url(#bg-fire)"/>
-<g stroke="#e8a79f" stroke-width="2.2" opacity=".5" fill="none"><path d="M5 6 L17 17 M95 6 L83 17 M5 44 L17 33 M95 44 L83 33"/></g>
-<g transform="translate(50 25) scale(.82)">
-<path d="M-2 -25 Q4 -32 9 -26 L1 -16 Z" fill="#4d9a4d" stroke="#2e6b2e" stroke-width="1.8"/>
-<path d="M1 -21 C18 -20 24 -5 15 8 C9 18 -6 21 -13 13 C-19 5 -14 -8 -5 -14 C-11 -17 -10 -22 1 -21 Z" fill="#e2483f" stroke="#8f241d" stroke-width="2.4"/>
-<path d="M-6 -12 C-11 -6 -12 2 -8 8" fill="none" stroke="#ff8f83" stroke-width="2.6" stroke-linecap="round" opacity=".75"/>
-<circle cx="-3" cy="-2" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="-5" r="2.9" fill="#1a1a1a"/>
-<circle cx="-4" cy="-3" r="1" fill="#fff"/><circle cx="5" cy="-6" r="1" fill="#fff"/>
-<path d="M-4 5 Q2 10 8 4" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-kaki:`<rect width="100" height="50" fill="url(#bg-ice)"/>
-<g stroke="#9fd2e8" stroke-width="2" opacity=".55" fill="none"><path d="M10 9 v7 M6.5 12.5 h7 M90 36 v7 M86.5 39.5 h7 M87 10 v5 M84.5 12.5 h5"/></g>
-<g transform="translate(50 26) scale(.86)">
-<path d="M-11 18 L11 18 L7 -6 Q0 -11 -7 -6 Z" fill="#eaf6fb" stroke="#3f83ad" stroke-width="2.4"/>
-<ellipse cx="0" cy="-10" rx="16" ry="11" fill="#fff" stroke="#3f83ad" stroke-width="2.4"/>
-<path d="M-11 -10 Q0 -22 11 -10" fill="none" stroke="#c9e8f6" stroke-width="3" stroke-linecap="round"/>
-<circle cx="0" cy="-21" r="3.6" fill="#d84b4b" stroke="#9c2820" stroke-width="1.5"/>
-<circle cx="-5" cy="0" r="2.5" fill="#1a1a1a"/><circle cx="5" cy="0" r="2.5" fill="#1a1a1a"/>
-<circle cx="-5.8" cy="-.8" r=".9" fill="#fff"/><circle cx="4.2" cy="-.8" r=".9" fill="#fff"/>
-<path d="M-5 6 Q0 10 5 6" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-<circle cx="-13" cy="3" r="2.5" fill="#f5b8c4" opacity=".8"/><circle cx="13" cy="3" r="2.5" fill="#f5b8c4" opacity=".8"/></g>`,
-
-natto:`<rect width="100" height="50" fill="url(#bg-poison)"/>
-<g stroke="#c0a6dd" stroke-width="1.8" opacity=".55" fill="none"><path d="M7 14 q7 6 0 13 M93 14 q-7 6 0 13"/></g>
-<g transform="translate(50 25) scale(1.02)">
-<g stroke="#efe0b8" stroke-width="1.6" opacity=".9" fill="none"><path d="M-16 4 q4 -8 2 12 M16 4 q-4 -8 -2 12 M0 12 q3 -6 -1 10"/></g>
-<ellipse cx="-10" cy="3" rx="10" ry="12" fill="#c9a15a" stroke="#6d5227" stroke-width="2.1"/>
-<ellipse cx="10" cy="3" rx="10" ry="12" fill="#d9b16a" stroke="#6d5227" stroke-width="2.1"/>
-<ellipse cx="0" cy="-7" rx="11" ry="13" fill="#e6c37f" stroke="#6d5227" stroke-width="2.1"/>
-<circle cx="-4" cy="-9" r="2.5" fill="#1a1a1a"/><circle cx="4" cy="-9" r="2.5" fill="#1a1a1a"/>
-<circle cx="-4.8" cy="-9.8" r=".9" fill="#fff"/><circle cx="3.2" cy="-9.8" r=".9" fill="#fff"/>
-<path d="M-4 -2 Q0 1 4 -2" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/></g>`,
-
-soda:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
-<g fill="#fff" opacity=".7"><circle cx="12" cy="12" r="3"/><circle cx="88" cy="16" r="2.4"/><circle cx="16" cy="38" r="2.2"/><circle cx="86" cy="37" r="3.2"/></g>
-<g transform="translate(50 26) scale(.8)">
-<path d="M-12 -14 L12 -14 L8 20 L-8 20 Z" fill="#fdf0b0" stroke="#a8851a" stroke-width="2.4"/>
-<rect x="-2.5" y="-29" width="5" height="17" rx="2.5" fill="#fff" stroke="#a8851a" stroke-width="1.6"/>
-<g fill="#fff" stroke="#a8851a" stroke-width="1.1"><circle cx="-5" cy="-6" r="2.3"/><circle cx="5" cy="-10" r="1.8"/><circle cx="2" cy="1" r="2.5"/></g>
-<circle cx="-5" cy="9" r="2.4" fill="#1a1a1a"/><circle cx="5" cy="9" r="2.4" fill="#1a1a1a"/>
-<circle cx="-5.8" cy="8.2" r=".9" fill="#fff"/><circle cx="4.2" cy="8.2" r=".9" fill="#fff"/>
-<path d="M-5 14 Q0 17 5 14" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/></g>`,
-
-onigiri:`<rect width="100" height="50" fill="url(#bg-none)"/>
-<g stroke="#c4c4c4" stroke-width="2" opacity=".65" fill="none"><path d="M8 40 h16 M76 40 h16"/></g>
-<g transform="translate(50 26) scale(.94)">
-<clipPath id="clip-oni"><path d="M0 -22 L19 14 Q21 19 16 19 L-16 19 Q-21 19 -19 14 Z"/></clipPath>
-<path d="M0 -22 L19 14 Q21 19 16 19 L-16 19 Q-21 19 -19 14 Z" fill="#fff" stroke="#333" stroke-width="2.4"/>
-<g clip-path="url(#clip-oni)"><rect x="-24" y="6" width="48" height="16" fill="#262626"/></g>
-<circle cx="-5" cy="-2" r="2.5" fill="#1a1a1a"/><circle cx="5" cy="-2" r="2.5" fill="#1a1a1a"/>
-<circle cx="-5.8" cy="-2.8" r=".9" fill="#fff"/><circle cx="4.2" cy="-2.8" r=".9" fill="#fff"/>
-<path d="M-4 4 Q0 7 4 4" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/>
-<circle cx="-12" cy="2" r="2.3" fill="#f3b9b9" opacity=".85"/><circle cx="12" cy="2" r="2.3" fill="#f3b9b9" opacity=".85"/></g>`,
-
-mapo:`<rect width="100" height="50" fill="url(#bg-fire)"/>
-<g stroke="#e8a79f" stroke-width="2" opacity=".45" fill="none"><path d="M8 40 q6 -10 12 0 M80 40 q6 -10 12 0"/></g>
-<g transform="translate(50 27) scale(.95)">
-<path d="M-20 -2 Q0 -10 20 -2 L16 12 Q0 19 -16 12 Z" fill="#c0392b" stroke="#7a1f16" stroke-width="2.2"/>
-<ellipse cx="0" cy="-3" rx="20" ry="6" fill="#e2483f" stroke="#7a1f16" stroke-width="2"/>
-<g fill="#f7f0e0" stroke="#8a6a3a" stroke-width="1.2"><rect x="-11" y="-8" width="7" height="7" rx="1.2"/><rect x="3" y="-9" width="7" height="7" rx="1.2"/><rect x="-4" y="-13" width="7" height="7" rx="1.2"/></g>
-<g stroke="#ffd0a0" stroke-width="2" opacity=".8" fill="none"><path d="M-12 -16 q3 -6 0 -10 M12 -16 q-3 -6 0 -10 M0 -20 q3 -5 0 -9"/></g>
-<circle cx="-6" cy="4" r="2.4" fill="#1a1a1a"/><circle cx="6" cy="4" r="2.4" fill="#1a1a1a"/>
-<circle cx="-6.8" cy="3.2" r=".9" fill="#fff"/><circle cx="5.2" cy="3.2" r=".9" fill="#fff"/>
-<path d="M-5 10 Q0 14 5 10" fill="none" stroke="#1a1a1a" stroke-width="2.1" stroke-linecap="round"/></g>`,
-
-icecream:`<rect width="100" height="50" fill="url(#bg-ice)"/>
-<g stroke="#9fd2e8" stroke-width="1.8" opacity=".5" fill="none"><path d="M12 12 v6 M9 15 h6 M88 34 v6 M85 37 h6"/></g>
-<g transform="translate(50 26) scale(.9)">
-<path d="M-9 4 L9 4 L0 22 Z" fill="#e6c78a" stroke="#9c7532" stroke-width="2.2"/>
-<path d="M-6 8 L6 8 M-4 13 L4 13" stroke="#9c7532" stroke-width="1.2"/>
-<circle cx="-6" cy="-2" r="9" fill="#fff0f4" stroke="#c98aa0" stroke-width="2"/>
-<circle cx="6" cy="-2" r="9" fill="#eaf6fb" stroke="#3f83ad" stroke-width="2"/>
-<circle cx="0" cy="-12" r="9.5" fill="#fdf6e0" stroke="#b89a4e" stroke-width="2"/>
-<circle cx="0" cy="-23" r="3.4" fill="#d84b4b" stroke="#9c2820" stroke-width="1.4"/>
-<circle cx="-4" cy="-13" r="2.3" fill="#1a1a1a"/><circle cx="4" cy="-13" r="2.3" fill="#1a1a1a"/>
-<circle cx="-4.8" cy="-13.8" r=".8" fill="#fff"/><circle cx="3.2" cy="-13.8" r=".8" fill="#fff"/>
-<path d="M-3.5 -7.5 Q0 -4.5 3.5 -7.5" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-kinoko:`<rect width="100" height="50" fill="url(#bg-poison)"/>
-<g stroke="#c0a6dd" stroke-width="1.8" opacity=".5" fill="none"><path d="M9 16 q6 6 0 12 M91 16 q-6 6 0 12"/></g>
-<g transform="translate(50 26) scale(.95)">
-<path d="M-7 2 Q-9 16 -6 20 L6 20 Q9 16 7 2 Z" fill="#f2e8d5" stroke="#8a7550" stroke-width="2.2"/>
-<path d="M-19 2 Q-19 -16 0 -16 Q19 -16 19 2 Z" fill="#8e5cc9" stroke="#5a3080" stroke-width="2.3"/>
-<g fill="#f4ecff" stroke="#5a3080" stroke-width="1"><circle cx="-11" cy="-6" r="3.2"/><circle cx="2" cy="-10" r="2.6"/><circle cx="12" cy="-4" r="2.9"/></g>
-<circle cx="-4" cy="8" r="2.3" fill="#1a1a1a"/><circle cx="4" cy="8" r="2.3" fill="#1a1a1a"/>
-<circle cx="-4.8" cy="7.2" r=".8" fill="#fff"/><circle cx="3.2" cy="7.2" r=".8" fill="#fff"/>
-<path d="M-3.5 13 Q0 15.5 3.5 13" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-energy:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
-<g fill="#fff" opacity=".65"><circle cx="11" cy="14" r="2.6"/><circle cx="89" cy="34" r="2.6"/></g>
-<g transform="translate(50 26) scale(.86)">
-<path d="M-11 -15 L11 -15 L9 18 Q0 22 -9 18 Z" fill="#3f3f3f" stroke="#111" stroke-width="2.3"/>
-<path d="M-11 -15 L11 -15 L10.4 -8 L-10.4 -8 Z" fill="#c9a227" stroke="#111" stroke-width="1.6"/>
-<path d="M2 -6 L-5 4 L0 4 L-2 13 L6 2 L1 2 Z" fill="#ffe14d" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/>
-<circle cx="-6" cy="9" r="2.2" fill="#fff"/><circle cx="6" cy="9" r="2.2" fill="#fff"/>
-<circle cx="-6" cy="9" r="1" fill="#111"/><circle cx="6" cy="9" r="1" fill="#111"/>
-<path d="M-13 -19 l3 5 M13 -19 l-3 5" stroke="#ffe14d" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-shokupan:`<rect width="100" height="50" fill="url(#bg-none)"/>
-<g stroke="#c4c4c4" stroke-width="2" opacity=".6" fill="none"><path d="M9 38 h14 M77 38 h14"/></g>
-<g transform="translate(50 26) scale(.92)">
-<path d="M-15 -8 Q-15 -20 0 -20 Q15 -20 15 -8 L15 17 Q15 20 12 20 L-12 20 Q-15 20 -15 17 Z" fill="#f7e3b8" stroke="#a07f3c" stroke-width="2.3"/>
-<path d="M-11 -6 Q-11 -15 0 -15 Q11 -15 11 -6 L11 15 L-11 15 Z" fill="#fffaf0" stroke="#a07f3c" stroke-width="1.4"/>
-<path d="M-22 -12 L20 -22" stroke="#8d8d8d" stroke-width="2.6" stroke-linecap="round"/>
-<path d="M-24 -10 L-19 -14" stroke="#5a5a5a" stroke-width="4" stroke-linecap="round"/>
-<circle cx="-4" cy="2" r="2.3" fill="#1a1a1a"/><circle cx="4" cy="2" r="2.3" fill="#1a1a1a"/>
-<circle cx="-4.8" cy="1.2" r=".8" fill="#fff"/><circle cx="3.2" cy="1.2" r=".8" fill="#fff"/>
-<path d="M-3.5 8 Q0 10.5 3.5 8" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-curry:`<rect width="100" height="50" fill="url(#bg-fire)"/>
-<g stroke="#ffb08a" stroke-width="2.2" opacity=".55" fill="none"><path d="M6 8 L16 18 M94 8 L84 18"/></g>
-<g transform="translate(50 27) scale(.95)">
-<path d="M-22 6 Q0 0 22 6 L18 15 Q0 21 -18 15 Z" fill="#fff" stroke="#8a8a8a" stroke-width="2"/>
-<path d="M-19 3 Q-8 -4 0 3 Q8 -4 19 3 Q10 9 0 7 Q-10 9 -19 3 Z" fill="#b5651d" stroke="#6d3c0e" stroke-width="2"/>
-<path d="M-4 -6 Q0 -20 6 -26 Q10 -18 6 -6 Z" fill="#e2483f" stroke="#8f241d" stroke-width="1.8"/>
-<path d="M-10 -4 Q-12 -14 -8 -19" fill="none" stroke="#ffb08a" stroke-width="2.2" stroke-linecap="round"/>
-<circle cx="-6" cy="2" r="2.3" fill="#1a1a1a"/><circle cx="6" cy="2" r="2.3" fill="#1a1a1a"/>
-<circle cx="-6.8" cy="1.2" r=".8" fill="#fff"/><circle cx="5.2" cy="1.2" r=".8" fill="#fff"/>
-<path d="M-4 8 Q0 12 4 8" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-parfait:`<rect width="100" height="50" fill="url(#bg-ice)"/>
-<g stroke="#9fd2e8" stroke-width="1.8" opacity=".5" fill="none"><path d="M11 11 v6 M8 14 h6 M89 33 v6 M86 36 h6"/></g>
-<g transform="translate(50 26) scale(.88)">
-<path d="M-11 -4 L11 -4 L7 14 L-7 14 Z" fill="#fdf6ff" stroke="#a07fc0" stroke-width="2.1" opacity=".95"/>
-<rect x="-3" y="14" width="6" height="5" fill="#e9e0f2" stroke="#a07fc0" stroke-width="1.6"/>
-<ellipse cx="0" cy="20" rx="9" ry="3" fill="#e9e0f2" stroke="#a07fc0" stroke-width="1.8"/>
-<path d="M-11 -4 Q0 -12 11 -4 Z" fill="#f7c9dc" stroke="#c07f9e" stroke-width="1.6"/>
-<circle cx="-5" cy="-12" r="7" fill="#fff0f4" stroke="#c98aa0" stroke-width="1.8"/>
-<circle cx="6" cy="-13" r="6.5" fill="#eaf6fb" stroke="#3f83ad" stroke-width="1.8"/>
-<circle cx="0" cy="-21" r="3.2" fill="#d84b4b" stroke="#9c2820" stroke-width="1.3"/>
-<path d="M12 -18 l6 -8" stroke="#c9a227" stroke-width="2.4" stroke-linecap="round"/>
-<circle cx="-4" cy="2" r="2.2" fill="#1a1a1a"/><circle cx="4" cy="2" r="2.2" fill="#1a1a1a"/>
-<path d="M-3 7 Q0 9.5 3 7" fill="none" stroke="#1a1a1a" stroke-width="1.9" stroke-linecap="round"/></g>`,
-
-ramune:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
-<g fill="#fff" opacity=".7"><circle cx="10" cy="11" r="2.8"/><circle cx="90" cy="15" r="2.2"/><circle cx="14" cy="39" r="2.4"/><circle cx="88" cy="38" r="2.8"/></g>
-<g transform="translate(50 26) scale(.82)">
-<path d="M-10 -18 Q-10 -24 0 -26 Q10 -24 10 -18 L12 14 Q12 20 0 21 Q-12 20 -12 14 Z" fill="#d6f0f7" stroke="#2f7f9c" stroke-width="2.3"/>
-<circle cx="0" cy="-17" r="3.6" fill="#fff" stroke="#2f7f9c" stroke-width="1.6"/>
-<path d="M3 -8 L-6 5 L0 5 L-3 16 L7 2 L1 2 Z" fill="#ffe14d" stroke="#8a6a10" stroke-width="1.5" stroke-linejoin="round"/>
-<g fill="#fff" opacity=".9"><circle cx="-6" cy="-6" r="2"/><circle cx="7" cy="-2" r="1.6"/></g>
-<circle cx="-5" cy="10" r="2.2" fill="#1a1a1a"/><circle cx="5" cy="10" r="2.2" fill="#1a1a1a"/>
-<path d="M-4 15 Q0 18 4 15" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-durian:`<rect width="100" height="50" fill="url(#bg-poison)"/>
-<g stroke="#b18ad8" stroke-width="2.2" opacity=".55" fill="none"><path d="M7 10 q8 8 0 15 M93 10 q-8 8 0 15 M50 3 v6"/></g>
-<g transform="translate(50 26) scale(.95)">
-<g fill="#7a9c3f" stroke="#48631f" stroke-width="1.6">
-<path d="M-18 -6 l-6 -5 l7 -1 Z"/><path d="M18 -6 l6 -5 l-7 -1 Z"/><path d="M0 -19 l-1 -8 l5 6 Z"/>
-<path d="M-13 -14 l-5 -6 l7 1 Z"/><path d="M13 -14 l5 -6 l-7 1 Z"/>
-<path d="M-18 8 l-7 3 l6 3 Z"/><path d="M18 8 l7 3 l-6 3 Z"/><path d="M0 19 l-2 8 l6 -6 Z"/></g>
-<ellipse cx="0" cy="0" rx="18" ry="17" fill="#8fb04a" stroke="#48631f" stroke-width="2.4"/>
-<g fill="#a8c463" stroke="#48631f" stroke-width="1"><circle cx="-9" cy="-8" r="2.4"/><circle cx="9" cy="-9" r="2.2"/><circle cx="11" cy="6" r="2.4"/><circle cx="-11" cy="6" r="2.2"/></g>
-<path d="M-9 -3 l7 3 M9 -3 l-7 3" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
-<circle cx="-5" cy="2" r="2.6" fill="#1a1a1a"/><circle cx="5" cy="2" r="2.6" fill="#1a1a1a"/>
-<circle cx="-5.8" cy="1.2" r=".9" fill="#fff"/><circle cx="4.2" cy="1.2" r=".9" fill="#fff"/>
-<path d="M-6 9 Q0 14 6 9" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-osechi:`<rect width="100" height="50" fill="url(#bg-none)"/>
-<g stroke="#d4b45a" stroke-width="2" opacity=".7" fill="none"><path d="M6 7 h10 M84 7 h10 M6 43 h10 M84 43 h10"/></g>
-<g transform="translate(50 26) scale(.95)">
-<rect x="-23" y="-15" width="46" height="30" rx="2.5" fill="#8c2f26" stroke="#4d1712" stroke-width="2.4"/>
-<rect x="-23" y="-15" width="46" height="6" fill="#c9a227" stroke="#4d1712" stroke-width="1.6"/>
-<g stroke="#4d1712" stroke-width="1.6"><path d="M-8 -9 v24 M8 -9 v24 M-23 3 h46"/></g>
-<g stroke="none">
-<circle cx="-15.5" cy="-3" r="4" fill="#f2e8d5"/><circle cx="-15.5" cy="-3" r="1.8" fill="#d84b4b"/>
-<rect x="3" y="-7" width="10" height="8" rx="1" fill="#f7d97a"/>
-<circle cx="15.5" cy="-3" r="4" fill="#7a9c3f"/>
-<rect x="-20" y="6" width="9" height="7" rx="1" fill="#e6c37f"/>
-<circle cx="0" cy="9" r="4" fill="#f2e8d5"/><circle cx="0" cy="9" r="1.8" fill="#8c2f26"/>
-<rect x="11" y="6" width="9" height="7" rx="1" fill="#c9a227"/></g>
-<circle cx="-4" cy="-12" r="1.8" fill="#1a1a1a"/><circle cx="4" cy="-12" r="1.8" fill="#1a1a1a"/></g>`
-,
-
-/* ---- スライム5種(共通のぷるぷる体型を属性ごとに色替え) ---- */
-burnslime:`<rect width="100" height="50" fill="url(#bg-fire)"/>
-<g stroke="#e8a79f" stroke-width="2.2" opacity=".45" fill="none"><path d="M6 8 L15 17 M94 8 L85 17"/></g>
-<g transform="translate(50 27) scale(1)">
-<g fill="#ff9a3c" stroke="#c1471b" stroke-width="1.6">
-<path d="M-7 -19 q3 -8 0 -12 q7 5 5 12 Z"/><path d="M6 -17 q2 -6 0 -9 q6 4 4 9 Z"/></g>
-<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#ef6a4d" stroke="#93301b" stroke-width="2.3"/>
-<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#ffc0ad" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>
-<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
-<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
-<path d="M-5 8 Q0 12 5 8" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-iceslime:`<rect width="100" height="50" fill="url(#bg-ice)"/>
-<g stroke="#9fd2e8" stroke-width="2" opacity=".55" fill="none"><path d="M10 9 v7 M6.5 12.5 h7 M90 34 v7 M86.5 37.5 h7"/></g>
-<g transform="translate(50 27)">
-<g stroke="#cdeaf7" stroke-width="1.8" opacity=".95" fill="none"><path d="M-9 -20 v6 M-12 -17 h6 M8 -22 v5 M5.5 -19.5 h5"/></g>
-<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#8fd0ee" stroke="#2c6f96" stroke-width="2.3"/>
-<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#e2f5ff" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>
-<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
-<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
-<path d="M-5 10 Q0 6 5 10" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-thunderslime:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
-<g fill="#fff" opacity=".6"><circle cx="12" cy="12" r="2.6"/><circle cx="88" cy="36" r="2.6"/></g>
-<g transform="translate(50 27)">
-<path d="M2 -26 L-6 -16 L-1 -16 L-4 -8 L6 -19 L1 -19 Z" fill="#ffe14d" stroke="#8a6a10" stroke-width="1.5" stroke-linejoin="round"/>
-<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#f3d94e" stroke="#8a6a10" stroke-width="2.3"/>
-<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#fff6c9" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>
-<path d="M-9 2 l4 -4 M9 2 l-4 -4" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
-<circle cx="-6" cy="2" r="2.6" fill="#1a1a1a"/><circle cx="6" cy="2" r="2.6" fill="#1a1a1a"/>
-<path d="M-5 9 q5 5 10 -1" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`,
-
-poisonslime:`<rect width="100" height="50" fill="url(#bg-poison)"/>
-<g stroke="#c0a6dd" stroke-width="1.8" opacity=".5" fill="none"><path d="M7 14 q7 6 0 13 M93 14 q-7 6 0 13"/></g>
-<g transform="translate(50 27)">
-<g fill="#c79bee" stroke="#5d2f8c" stroke-width="1.4" opacity=".95">
-<circle cx="-10" cy="-20" r="3"/><circle cx="4" cy="-23" r="2.2"/><circle cx="12" cy="-18" r="2.6"/></g>
-<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#a86fdc" stroke="#4d2578" stroke-width="2.3"/>
-<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#e2caf7" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>
-<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
-<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
-<path d="M-6 8 q3 4 6 0 q3 4 6 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
-
-normalslime:`<rect width="100" height="50" fill="url(#bg-none)"/>
-<g stroke="#c4c4c4" stroke-width="2" opacity=".6" fill="none"><path d="M8 40 h14 M78 40 h14"/></g>
-<g transform="translate(50 27)">
-<path d="M-21 13 C-23 -3 -12 -15 0 -15 C12 -15 23 -3 21 13 Q21 16 17 16 L-17 16 Q-21 16 -21 13 Z" fill="#c9d2ce" stroke="#5b6864" stroke-width="2.3"/>
-<path d="M-13 -3 q-4 5 -3 11" fill="none" stroke="#f2f6f4" stroke-width="2.6" stroke-linecap="round" opacity=".95"/>
-<circle cx="-6" cy="1" r="2.9" fill="#1a1a1a"/><circle cx="6" cy="1" r="2.9" fill="#1a1a1a"/>
-<circle cx="-6.9" cy="0" r="1" fill="#fff"/><circle cx="5.1" cy="0" r="1" fill="#fff"/>
-<path d="M-4 9 h8" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/></g>`
-};
+const MAX_LV = 4;
+/* n番目(0始まり)のスキルが解放されるLv。王スキルは index 3 相当 */
+function unlockLv(idx){ return idx + 1; }
+function skillUnlocked(lv, idx){ return lv >= unlockLv(idx); }
+function kingActive(lv){ return lv >= MAX_LV; }
 
 /* =========================================================
    スキル定義ヘルパ
-   ── 前衛/後衛でプールは分かれていない ──
-   同じ効果をどちらの役割にも自由に載せられる。role がその枠を決めるだけ。
-     F(...) = 前衛枠から使うスキル
-     B(...) = 後衛枠から使うスキル
+   role  = どの枠に置かれている時に使えるか(前衛枠 / 後衛枠)
+   reach = 誰を狙えるか。role とは独立
+     'front' … 手前のみ(相手の前衛と、前衛が倒れて露出した枠)
+     'any'   … 遮蔽を無視して誰でも
    ========================================================= */
-/* role  = そのカードがどの枠に置かれている時に使えるか(前衛枠 / 後衛枠)
-   reach = 誰を狙えるか。role とは独立に設定できる
-     'front' … 手前のみ。相手の前衛と、前衛が倒れて空いた穴から露出した枠だけ
-     'any'   … 遮蔽を無視して相手の誰でも
-   既定は F→手前のみ / B→誰でも だが、どちらにも明示指定できる */
 function F(o){ return Object.assign({role:'front', reach:'front', cost:1}, o); }
 function B(o){ return Object.assign({role:'back',  reach:'any',   cost:1}, o); }
 function mkSkill(o){ return Object.assign({role:'front', reach:'front', cost:1}, o); }
 
 /* =========================================================
-   カードDB
-   skills は最大3枠。前衛スキルが1つだけ / 後衛が2つ といった変則も可。
-   足りない枠はカード上で空欄になる。
-   ── 設計の目安(強制ではない) ──
-     前衛 = 単純攻撃 / 弱い攻撃+状態異常 / SP2以上の重撃
-     後衛 = SP回復・回復・バフ・デバフなどの支援。全体攻撃は少数のみ
-   ※現行15枚はすべてベータ検証用の仮キャラ(名前に「(仮)」)
+   カードアート(viewBox 0 0 100 50 / 絵文字は一切使わない)
+   ========================================================= */
+const ART = {
+ramen:`<rect width="100" height="50" fill="url(#bg-fire)"/>
+<g stroke="#e6a99c" stroke-width="2" opacity=".45" fill="none"><path d="M8 40q6-9 12 0M80 40q6-9 12 0"/></g>
+<g transform="translate(50 28)">
+<g stroke="#f2c9a0" stroke-width="2.1" opacity=".85" fill="none" stroke-linecap="round">
+<path d="M-11 -14q4-6 0-11M0 -16q4-6 0-11M11 -14q4-6 0-11"/></g>
+<path d="M-21 -4H21q0 15-21 15T-21 -4z" fill="#c94a30" stroke="#7d2415" stroke-width="2.2"/>
+<path d="M-21 -4H21" stroke="#7d2415" stroke-width="2.2"/>
+<path d="M-17 -6q6-4 12 0t12 0" fill="none" stroke="#f5deb0" stroke-width="2.4" stroke-linecap="round"/>
+<circle cx="-9" cy="-8.5" r="3.4" fill="#f7f0e0" stroke="#8a6a3a" stroke-width="1.3"/>
+<circle cx="-9" cy="-8.5" r="1.4" fill="#e0a03c"/>
+<rect x="4" y="-12" width="8" height="6" rx="1" fill="#3f7a3f" stroke="#255025" stroke-width="1.2"/>
+<circle cx="-5" cy="3" r="2.3" fill="#1a1a1a"/><circle cx="5" cy="3" r="2.3" fill="#1a1a1a"/>
+<circle cx="-5.7" cy="2.2" r=".8" fill="#fff"/><circle cx="4.3" cy="2.2" r=".8" fill="#fff"/>
+<path d="M-4 8q4 3 8 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
+
+chili:`<rect width="100" height="50" fill="url(#bg-fire)"/>
+<g stroke="#e6a99c" stroke-width="2.2" opacity=".4" fill="none"><path d="M6 8 15 17M94 8 85 17"/></g>
+<g transform="translate(50 28)">
+<path d="M-4 -17q3-7 0-10 5 3 4 10z" fill="#ff9a3c" stroke="#b8501a" stroke-width="1.5"/>
+<path d="M6 -16q2-5 0-8 4 3 3 8z" fill="#ffc24d" stroke="#b8501a" stroke-width="1.4"/>
+<path d="M-24 2q0-8 24-8t24 8-24 9-24-9z" fill="#e8b96a" stroke="#8a6224" stroke-width="2.2"/>
+<path d="M-19 0q0-4 19-4t19 4-19 5-19-5z" fill="#b8543a" stroke="#6e2a18" stroke-width="1.9"/>
+<path d="M-16 -1q5 3 8-1t8 1 8-1" fill="none" stroke="#f5d84f" stroke-width="2.2" stroke-linecap="round"/>
+<circle cx="-6" cy="6" r="2.3" fill="#1a1a1a"/><circle cx="6" cy="6" r="2.3" fill="#1a1a1a"/>
+<path d="M-5 11q5 4 10 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
+
+pudding:`<rect width="100" height="50" fill="url(#bg-ice)"/>
+<g stroke="#9fd0e6" stroke-width="1.9" opacity=".5" fill="none"><path d="M10 9v6M7 12h6M90 35v6M87 38h6"/></g>
+<g transform="translate(50 28)">
+<path d="M-13 -13h26l4 24q0 4-17 4t-17-4z" fill="#f7dd9a" stroke="#a8842e" stroke-width="2.2"/>
+<path d="M-13 -13h26q0 4-13 4t-13-4z" fill="#a05a24" stroke="#6b3a13" stroke-width="2"/>
+<path d="M-9 -12q3 6 9 3t9 2" fill="none" stroke="#c47a34" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+<ellipse cx="0" cy="15" rx="17" ry="4" fill="#c48a34" stroke="#6b3a13" stroke-width="1.8"/>
+<circle cx="-6" cy="3" r="2.4" fill="#1a1a1a"/><circle cx="6" cy="3" r="2.4" fill="#1a1a1a"/>
+<circle cx="-6.8" cy="2.2" r=".9" fill="#fff"/><circle cx="5.2" cy="2.2" r=".9" fill="#fff"/>
+<path d="M-3.5 8.5q3.5 3 7 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+<circle cx="-14" cy="5" r="2.4" fill="#f2b6c4" opacity=".8"/><circle cx="14" cy="5" r="2.4" fill="#f2b6c4" opacity=".8"/></g>`,
+
+sorbet:`<rect width="100" height="50" fill="url(#bg-ice)"/>
+<g stroke="#9fd0e6" stroke-width="1.9" opacity=".55" fill="none"><path d="M11 10v7M7.5 13.5h7M89 33v7M85.5 36.5h7"/></g>
+<g transform="translate(50 28)">
+<path d="M16 -19 26 -25" stroke="#b8901a" stroke-width="2.6" stroke-linecap="round"/>
+<ellipse cx="19" cy="-18" rx="4.4" ry="3" fill="#e8dcc0" stroke="#8a7332" stroke-width="1.5"/>
+<path d="M-14 -6h28l-4 17q-1 3-10 3t-10-3z" fill="#dff1fa" stroke="#2f7fae" stroke-width="2.2" opacity=".95"/>
+<circle cx="-6" cy="-11" r="8.4" fill="#bfe6f7" stroke="#2f7fae" stroke-width="2"/>
+<circle cx="6" cy="-12" r="7.6" fill="#f3f9fd" stroke="#2f7fae" stroke-width="2"/>
+<circle cx="0" cy="-19" r="3.4" fill="#d0517a" stroke="#8e2b4c" stroke-width="1.4"/>
+<circle cx="-4" cy="1" r="2.3" fill="#1a1a1a"/><circle cx="4" cy="1" r="2.3" fill="#1a1a1a"/>
+<path d="M-3 6.5q3 2.6 6 0" fill="none" stroke="#1a1a1a" stroke-width="1.9" stroke-linecap="round"/></g>`,
+
+nuka:`<rect width="100" height="50" fill="url(#bg-poison)"/>
+<g stroke="#bb9fdb" stroke-width="1.8" opacity=".5" fill="none"><path d="M7 14q7 6 0 13M93 14q-7 6 0 13"/></g>
+<g transform="translate(50 28)">
+<path d="M-16 -12h32v22q0 5-16 5t-16-5z" fill="#d9c79a" stroke="#7d6631" stroke-width="2.2"/>
+<rect x="-19" y="-16" width="38" height="5" rx="2" fill="#8a6a3a" stroke="#4f3a17" stroke-width="1.8"/>
+<path d="M-11 -8q4 14 0 18M0 -9q3 14 0 19M11 -8q-4 14 0 18" fill="none" stroke="#5f8a3a" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="-5" cy="2" r="2.4" fill="#1a1a1a"/><circle cx="5" cy="2" r="2.4" fill="#1a1a1a"/>
+<circle cx="-5.8" cy="1.2" r=".9" fill="#fff"/><circle cx="4.2" cy="1.2" r=".9" fill="#fff"/>
+<path d="M-4 8q4 3 8 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
+
+mushroom:`<rect width="100" height="50" fill="url(#bg-poison)"/>
+<g stroke="#bb9fdb" stroke-width="1.8" opacity=".45" fill="none"><path d="M9 16q6 6 0 12M91 16q-6 6 0 12"/></g>
+<g transform="translate(50 29)">
+<path d="M-22 8h44q-2 10-22 10T-22 8z" fill="#6d5330" stroke="#3f2d15" stroke-width="2.1"/>
+<path d="M-7 -2q-2 8-1 11h16q1-3-1-11z" fill="#f0e6cf" stroke="#8a7550" stroke-width="2"/>
+<path d="M-19 -2q0-16 19-16t19 16z" fill="#7b40b5" stroke="#4a2270" stroke-width="2.3"/>
+<g fill="#f0e4ff" stroke="#4a2270" stroke-width="1"><circle cx="-10" cy="-8" r="3.2"/><circle cx="3" cy="-11" r="2.5"/><circle cx="12" cy="-6" r="2.7"/></g>
+<circle cx="-4" cy="3" r="2.2" fill="#1a1a1a"/><circle cx="4" cy="3" r="2.2" fill="#1a1a1a"/>
+<path d="M-3 8q3 2.5 6 0" fill="none" stroke="#1a1a1a" stroke-width="1.9" stroke-linecap="round"/></g>`,
+
+cider:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
+<g fill="#fff" opacity=".6"><circle cx="12" cy="12" r="2.8"/><circle cx="88" cy="36" r="2.4"/><circle cx="15" cy="38" r="2"/></g>
+<g transform="translate(50 28)">
+<path d="M-9 -18q0-5 9-6t9 6l3 26q0 5-12 5t-12-5z" fill="#cfeaf2" stroke="#2c7d94" stroke-width="2.3"/>
+<rect x="-6" y="-24" width="12" height="5" rx="2" fill="#b8901a" stroke="#7a5c0e" stroke-width="1.6"/>
+<g fill="#fff" opacity=".95"><circle cx="-4" cy="-6" r="2.2"/><circle cx="5" cy="-11" r="1.7"/><circle cx="3" cy="1" r="2.4"/></g>
+<circle cx="-5" cy="8" r="2.2" fill="#1a1a1a"/><circle cx="5" cy="8" r="2.2" fill="#1a1a1a"/>
+<path d="M-4 13q4 3 8 0" fill="none" stroke="#1a1a1a" stroke-width="1.9" stroke-linecap="round"/></g>`,
+
+jelly:`<rect width="100" height="50" fill="url(#bg-bolt)"/>
+<g fill="#fff" opacity=".55"><circle cx="11" cy="14" r="2.6"/><circle cx="89" cy="34" r="2.6"/></g>
+<g transform="translate(50 28)">
+<path d="M2 -25 -7 -14h5.4l-2.6 8.6L6 -17H.6z" fill="#ffe14d" stroke="#8a6a10" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M-18 -10h36v18q0 5-18 5t-18-5z" fill="#f0d75a" stroke="#8a6a10" stroke-width="2.3" opacity=".95"/>
+<path d="M-18 -10h36l-6-6h-24z" fill="#f7e894" stroke="#8a6a10" stroke-width="2"/>
+<path d="M-13 -5q-2 9-1 13" fill="none" stroke="#fff8cf" stroke-width="2.6" stroke-linecap="round"/>
+<circle cx="-5" cy="2" r="2.3" fill="#1a1a1a"/><circle cx="5" cy="2" r="2.3" fill="#1a1a1a"/>
+<path d="M-4 8q4 3 8 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/></g>`,
+
+rice:`<rect width="100" height="50" fill="url(#bg-none)"/>
+<g stroke="#c2ccc7" stroke-width="2" opacity=".6" fill="none"><path d="M8 40h14M78 40h14"/></g>
+<g transform="translate(50 29)">
+<path d="M-16 -6q6-12 16-12t16 12q-6 4-16 4t-16-4z" fill="#fff" stroke="#8d9a94" stroke-width="2.2"/>
+<path d="M-23 -6h46q-3 16-23 16T-23 -6z" fill="#3a5c74" stroke="#1e3648" stroke-width="2.3"/>
+<path d="M-19 -3h38" stroke="#7fa3ba" stroke-width="1.8"/>
+<ellipse cx="0" cy="12" rx="9" ry="3" fill="#3a5c74" stroke="#1e3648" stroke-width="1.8"/>
+<circle cx="-5" cy="-9" r="2.2" fill="#1a1a1a"/><circle cx="5" cy="-9" r="2.2" fill="#1a1a1a"/>
+<path d="M-3.5 -4.5q3.5 2.5 7 0" fill="none" stroke="#1a1a1a" stroke-width="1.9" stroke-linecap="round"/></g>`,
+
+feast:`<rect width="100" height="50" fill="url(#bg-none)"/>
+<g stroke="#cbb26a" stroke-width="2" opacity=".7" fill="none"><path d="M6 7h10M84 7h10M6 43h10M84 43h10"/></g>
+<g transform="translate(50 27)">
+<rect x="-24" y="-16" width="48" height="32" rx="2.5" fill="#7d2c22" stroke="#43120d" stroke-width="2.3"/>
+<rect x="-24" y="-16" width="48" height="6" fill="#b8901a" stroke="#43120d" stroke-width="1.7"/>
+<g stroke="#43120d" stroke-width="1.6"><path d="M-8 -10v26M8 -10v26M-24 3h48"/></g>
+<circle cx="-16" cy="-3" r="4" fill="#f0e6cf"/><circle cx="-16" cy="-3" r="1.8" fill="#c1362c"/>
+<rect x="3" y="-7" width="10" height="8" rx="1" fill="#f2d472"/>
+<circle cx="16" cy="-3" r="4" fill="#5f8a3a"/>
+<rect x="-21" y="6" width="9" height="7" rx="1" fill="#d9c79a"/>
+<circle cx="0" cy="9" r="4" fill="#f0e6cf"/><circle cx="0" cy="9" r="1.8" fill="#7d2c22"/>
+<rect x="11" y="6" width="9" height="7" rx="1" fill="#b8901a"/>
+<circle cx="-5" cy="-13" r="1.7" fill="#1a1a1a"/><circle cx="5" cy="-13" r="1.7" fill="#1a1a1a"/></g>`
+};
+
+/* =========================================================
+   カードDB(全10枚 / 属性ごと2枚)
+   ── 設計方針 ──
+   ・レアリティで素の数値を吊り上げず、HPと威力は「硬い＝低火力 /
+     脆い＝高火力」のトレードで散らす。レアリティ差はスキルの
+     「質」(効果の種類・複合度)で付ける
+   ・skills[0] は必ず前衛スキル(Lv1で唯一使える枠のため)
+   ・skills は必ず3つ。王スキルと合わせて計4つがLvで解放される
    ========================================================= */
 const CARD_DB = {
-  /* ---------------- N ---------------- */
-  karai:{name:'激辛くん(仮)', elem:'炎', rarity:'N', hp:35,
-    skills:[ F({name:'唐辛子パンチ', power:16}),
-             F({name:'爆速フレイバー', power:10, status:{type:'burn', chance:.25}}),
-             B({name:'仕込みの一味', power:0, friendly:true, buffTarget:{amount:.12, turns:2}}) ],
-    king:{name:'猛暑の意地', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
+  /* ---------------- 炎 ---------------- */
+  ramen:{name:'湯気立つラーメン', elem:'炎', rarity:'N', hp:54,
+    skills:[ F({name:'熱々スープ', power:17}),
+             B({name:'湯気の癒し', power:0, friendly:true, heal:18}),
+             F({name:'追い油', cost:2, power:28}) ],
+    king:{name:'出汁の温もり', desc:'ターン開始時に王HP+4', trigger:'turnHeal', value:4}},
 
-  kaki:{name:'かき氷ちゃん(仮)', elem:'氷', rarity:'N', hp:40,
-    skills:[ F({name:'シャリシャリ', power:14}),
-             F({name:'フリーズタッチ', power:8, status:{type:'freeze', chance:.15}}),
-             B({name:'冷やしなおし', power:0, friendly:true, heal:10}) ],
-    king:{name:'クールダウン', desc:'ターン開始時HP+3', trigger:'turnHeal', value:3}},
+  chili:{name:'火吹きチリドッグ', elem:'炎', rarity:'R', hp:48,
+    skills:[ F({name:'激辛かぶりつき', power:20}),
+             F({name:'火炎ブレス', power:12, status:{type:'burn', chance:.6}}),
+             B({name:'香辛料の鼓舞', power:0, friendly:true, buffAll:{amount:.2, turns:2}}) ],
+    king:{name:'灼熱の意地', desc:'味方が倒れる毎に攻+12%', trigger:'rage', value:.12}},
 
-  natto:{name:'ねばねば納豆(仮)', elem:'毒', rarity:'N', hp:38,
-    skills:[ F({name:'粘着シュート', power:13}),
-             F({name:'発酵ニードル', power:8, status:{type:'poison', chance:1}}),
-             B({name:'発酵ガス', power:0, status:{type:'poison', chance:.4}}) ],
-    king:{name:'発酵パワー', desc:'状態異常の敵に+3', trigger:'statusBonus', value:3}},
+  /* ---------------- 氷 ---------------- */
+  pudding:{name:'ゆれるプリン', elem:'氷', rarity:'N', hp:50,
+    skills:[ F({name:'ぷるんアタック', power:17}),
+             B({name:'ひんやり鎮静', power:0, debuffAtk:{amount:.3, turns:2}}),
+             F({name:'カラメル固め', power:13, status:{type:'freeze', chance:.35}}) ],
+    king:{name:'なめらか回避', desc:'前衛2枚生存で被ダメ-12%', trigger:'frontGuard', value:.12}},
 
-  soda:{name:'シュワソーダ(仮)', elem:'雷', rarity:'N', hp:32,
-    skills:[ F({name:'炭酸弾け', power:18}),
-             F({name:'スパークタッチ', power:10, status:{type:'paralyze', chance:.25}}),
-             B({name:'気泡はじき', power:4, allEnemies:true}) ],
-    king:{name:'怒りの泡立ち', desc:'味方が倒れる毎に攻+10%', trigger:'rage', value:.1}},
+  sorbet:{name:'氷結ソルベ', elem:'氷', rarity:'SR', hp:56,
+    skills:[ F({name:'氷刃スプーン', power:18}),
+             F({name:'絶対零度', cost:2, power:27, status:{type:'freeze', chance:.35}}),
+             B({cost:2, name:'再生のシロップ', power:0, friendly:true, revive:{hpPct:.4}, targetDead:true}) ],
+    king:{name:'静寂の守り', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
 
-  onigiri:{name:'しろいおにぎり(仮)', elem:'無', rarity:'N', hp:45,
-    skills:[ F({name:'まんまるタックル', power:15}),
-             F({name:'大盛りタックル', cost:2, power:26}),
-             B({name:'おむすび休憩', power:0, friendly:true, gainSP:2}) ],
-    king:{name:'安定の白米', desc:'後衛2枚生存で毎T HP+5', trigger:'backHeal', value:5}},
+  /* ---------------- 毒 ---------------- */
+  nuka:{name:'ぬか漬けマスター', elem:'毒', rarity:'N', hp:52,
+    skills:[ F({name:'漬け込みパンチ', power:17}),
+             F({name:'発酵の刺', power:13, status:{type:'poison', chance:.8}}),
+             B({name:'床の手入れ', power:0, friendly:true, cleanse:true, buffTarget:{amount:.12, turns:2}}) ],
+    king:{name:'熟成の妙', desc:'状態異常の敵に+4', trigger:'statusBonus', value:4}},
 
-  /* ---------------- R ---------------- */
-  mapo:{name:'麻婆マスター(仮)', elem:'炎', rarity:'R', hp:42,
-    skills:[ F({name:'花椒バースト', power:20}),
-             F({name:'灼熱の一撃', cost:2, power:32}),
-             B({name:'痺れの香り', power:0, debuffAtk:{amount:.2, turns:2}}) ],
-    king:{name:'背水の激辛', desc:'王だけになると全能力+40%', trigger:'lastStand', value:.4}},
+  mushroom:{name:'妖しいキノコ鍋', elem:'毒', rarity:'R', hp:48,
+    skills:[ F({name:'胞子スプラッシュ', power:18}),
+             B({name:'痺れ胞子', power:0, debuffAll:{amount:.22, turns:2}}),
+             F({cost:2, name:'猛毒煮込み', power:24, status:{type:'poison', chance:1}}) ],
+    king:{name:'菌糸の増殖', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
 
-  icecream:{name:'アイスクリン(仮)', elem:'氷', rarity:'R', hp:44,
-    skills:[ F({name:'コールドスクープ', power:17}),
-             F({name:'フリーズシロップ', power:9, status:{type:'freeze', chance:.3}}),
-             B({name:'やさしい甘み', power:0, friendly:true, heal:16}) ],
-    king:{name:'ひんやり治癒', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
+  /* ---------------- 雷 ---------------- */
+  cider:{name:'はじけるサイダー', elem:'雷', rarity:'N', hp:46,
+    skills:[ F({name:'泡ショット', power:15}),
+             F({name:'しびれ炭酸', power:11, status:{type:'paralyze', chance:.35}}),
+             B({name:'気付けの一杯', power:0, friendly:true, gainSP:2, oncePerTurn:true}) ],
+    king:{name:'爽快感', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
 
-  kinoko:{name:'あやしいキノコ(仮)', elem:'毒', rarity:'R', hp:40,
-    skills:[ F({name:'胞子ばらまき', power:15}),
-             F({name:'猛毒スティング', power:9, status:{type:'poison', chance:.8}}),
-             B({name:'菌糸のいたずら', power:0, reflectStatus:true, gainSP:1}) ],
-    king:{name:'毒素蓄積', desc:'ターン毎に攻+8% 最大40%', trigger:'rampUp', value:.08, max:.4}},
+  jelly:{name:'帯電ゼリー', elem:'雷', rarity:'R', hp:50,
+    skills:[ F({name:'放電タックル', power:16}),
+             B({name:'電力供給', power:0, friendly:true, gainSP:2, oncePerTurn:true}),
+             F({cost:2, name:'雷撃スパーク', power:26, status:{type:'paralyze', chance:.4}}) ],
+    king:{name:'導通', desc:'味方が状態異常付与で追加5', trigger:'onStatusInflict', value:5}},
 
-  energy:{name:'エナジー王子(仮)', elem:'雷', rarity:'R', hp:36,
-    skills:[ F({name:'カフェインラッシュ', power:16}),
-             F({name:'エナジードレイン', power:10, status:{type:'paralyze', chance:.4}}),
-             B({name:'ブースト供給', power:0, friendly:true, gainSP:3}) ],
-    king:{name:'限界突破', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
+  /* ---------------- 無 ---------------- */
+  rice:{name:'大盛りごはん', elem:'無', rarity:'N', hp:62,
+    skills:[ F({name:'どっしり体当たり', power:15}),
+             B({name:'おかわり配給', power:0, friendly:true, healAll:9}),
+             F({cost:2, name:'山盛りプレス', power:26}) ],
+    king:{name:'満腹の安心', desc:'後衛2枚生存で毎T 王HP+5', trigger:'backHeal', value:5}},
 
-  shokupan:{name:'食パン侍(仮)', elem:'無', rarity:'R', hp:48,
-    skills:[ F({name:'一刀両断', power:20}),
-             F({name:'二段斬り', cost:2, power:30}),
-             B({name:'耳まで香ばしく', power:0, friendly:true, cleanse:true, buffTarget:{amount:.15, turns:2}}) ],
-    king:{name:'不屈の耳', desc:'前衛の致死ダメをHP1耐え', trigger:'endure'}},
-
-  /* ---------------- SR ---------------- */
-  curry:{name:'火山カレー(仮)', elem:'炎', rarity:'SR', hp:52,
-    skills:[ F({name:'噴火プレート', power:22}),
-             F({name:'溶岩ルー', cost:2, power:36}),
-             B({name:'スパイス鼓舞', power:0, friendly:true, buffAll:{amount:.15, turns:2}}) ],
-    king:{name:'噴火の怒り', desc:'被弾3回ごとに全体へ8反撃', trigger:'counter', need:3, value:8}},
-
-  parfait:{name:'パフェ姫(仮)', elem:'氷', rarity:'SR', hp:50,
-    skills:[ F({name:'クリスタルスプーン', power:19}),
-             F({name:'甘い誘惑', power:10, sealTarget:true}),
-             B({name:'再生のシロップ', cost:2, power:0, friendly:true, revive:{hpPct:.35}, targetDead:true}) ],
-    king:{name:'満漢のきらめき', desc:'5枚全員生存で全体+20%', trigger:'fullBoard', value:.2}},
-
-  ramune:{name:'雷神ラムネ(仮)', elem:'雷', rarity:'SR', hp:46,
-    skills:[ F({name:'ビー玉スマッシュ', power:21}),
-             F({name:'雷鳴の一撃', cost:2, power:34}),
-             B({name:'炭酸ブースト', power:6, allEnemies:true, drainSP:1}) ],
-    king:{name:'雷鳴の伝播', desc:'味方が状態異常付与で追加6', trigger:'onStatusInflict', value:6}},
-
-  /* ---------------- UR ---------------- */
-  /* ドリアン卿は「前衛スキルを1つしか持たない異端」の実例。3枠目は空欄になる */
-  durian:{name:'ドリアン卿(仮)', elem:'毒', rarity:'UR', hp:58,
-    skills:[ F({name:'棘の王笏', power:26}),
-             B({name:'瘴気の帳', power:0, debuffAll:{amount:.2, turns:2}}) ],
-    king:{name:'異臭結界', desc:'氷属性からの被ダメを無効', trigger:'elemNull', elem:'氷'}},
-
-  osechi:{name:'おせち重(仮)', elem:'無', rarity:'UR', hp:62,
-    skills:[ F({name:'祝いの大盤振舞', power:22}),
-             F({name:'重箱返し', cost:2, power:34, swapEnemy:true}),
-             B({name:'一年の計', cost:2, power:0, friendly:true, healAll:12, cleanse:true}) ],
-    king:{name:'五段重ねの祝', desc:'5枚全員生存で全体+25%', trigger:'fullBoard', value:.25}},
-
-  /* ---------------- N:スライム族 ---------------- */
-  burnslime:{name:'燃えてるスライム', elem:'炎', rarity:'N', hp:35,
-    skills:[ F({name:'つつく', power:12}),
-             F({name:'抱きつく', power:9, status:{type:'burn', chance:1}}),
-             B({name:'熱くなれ', power:0, friendly:true, buffTarget:{amount:.15, turns:3}}) ],
-    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
-
-  iceslime:{name:'凍てつくスライム', elem:'氷', rarity:'N', hp:35,
-    skills:[ F({name:'つつく', power:12}),
-             F({name:'冷たい風', power:10, status:{type:'freeze', chance:1}}),
-             B({cost:2, name:'吹雪', power:10, allEnemies:true}) ],
-    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
-
-  thunderslime:{name:'ビリビリスライム', elem:'雷', rarity:'N', hp:35,
-    skills:[ F({name:'つつく', power:11}),
-             F({name:'ビリリ', power:8, status:{type:'paralyze', chance:.5}}),
-             B({name:'ビリリリリリリリ', power:0, status:{type:'paralyze', chance:1}}) ],
-    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
-
-  poisonslime:{name:'毒々しいスライム', elem:'毒', rarity:'N', hp:35,
-    skills:[ F({name:'つつく', power:13}),
-             F({name:'やばい液体', power:10, status:{type:'poison', chance:.5}}),
-             B({name:'こう見えて回復薬', power:0, friendly:true, heal:10}) ],
-    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
-
-  normalslime:{name:'ただのスライム', elem:'無', rarity:'N', hp:35,
-    skills:[ F({name:'つつく', power:12}),
-             B({name:'遠距離の嫌がらせ', power:8, stun:true}) ],
-    king:{name:'スライムのくせに王', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}}
+  feast:{name:'五段重の宴', elem:'無', rarity:'UR', hp:58,
+    skills:[ F({name:'祝いの一撃', power:19}),
+             F({cost:2, name:'重箱返し', power:26, swapEnemy:true}),
+             B({cost:2, name:'一年の計', power:0, friendly:true, healAll:12, cleanse:true}) ],
+    king:{name:'五段の祝', desc:'5枚全員生存で全体+18%', trigger:'fullBoard', value:.18}}
 };
 
 const CARD_IDS = Object.keys(CARD_DB);

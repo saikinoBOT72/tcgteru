@@ -11,24 +11,26 @@ const TURN_LIMIT = 30;
 
 let teams, state;
 
-function createCard(id){
+function createCard(id, lv){
   const t = CARD_DB[id];
   return {
     tplId:id, name:t.name, elem:t.elem, rarity:t.rarity, hp:t.hp, maxHp:t.hp,
+    lv: Math.min(MAX_LV, Math.max(1, lv || 1)),
     skills:t.skills, king:t.king,
-    status:null, statusTurns:0, alive:true,
+    status:null, statusTurns:0, alive:true, usedThisTurn:{},
     atkBuff:0, atkBuffTurns:0, sealed:0, stunned:0, freeMove:false
   };
 }
 
+/* ids は id文字列、または {id, lv} を混在で受け取れる */
 function makeTeam(ids){
+  const g = i => {
+    const e = ids[i];
+    return (e && typeof e === 'object') ? createCard(e.id, e.lv) : createCard(e, MAX_LV);
+  };
   return {
     fallenCount:0, sp:0, hitCount:0, turnCount:0, rampUp:0, freeMove:false,
-    slots:{
-      frontL:createCard(ids[0]), frontR:createCard(ids[1]),
-      backL:createCard(ids[2]),  backR:createCard(ids[3]),
-      king:createCard(ids[4])
-    }
+    slots:{ frontL:g(0), frontR:g(1), backL:g(2), backR:g(3), king:g(4) }
   };
 }
 
@@ -52,9 +54,10 @@ function deadSlots(tk){
   return SLOTS.filter(k => s[k] && !s[k].alive);
 }
 function kingOf(tk){ const k = teams[tk].slots.king; return (k && k.alive) ? k : null; }
+/* 王スキルは Lv4 に到達したカードだけが発動する(4つ目の解放枠) */
 function kingTrig(tk, trigger){
   const k = kingOf(tk);
-  return (k && k.king.trigger === trigger) ? k.king : null;
+  return (k && kingActive(k.lv) && k.king.trigger === trigger) ? k.king : null;
 }
 function isLastStand(tk){
   return aliveSlots(tk).length === 1 && !!kingOf(tk);
@@ -261,7 +264,8 @@ function usableSkills(tk, slotKey){
   const c = teams[tk].slots[slotKey];
   if(!c || !c.alive || c.sealed > 0) return [];
   return (c.skills || []).map((sk, idx) => ({idx, skill:sk}))
-    .filter(o => canUse(slotKey, o.skill));
+    .filter(o => skillUnlocked(c.lv, o.idx) && canUse(slotKey, o.skill)
+             && !(o.skill.oncePerTurn && c.usedThisTurn[o.idx]));
 }
 
 /* =========================================================
@@ -288,6 +292,10 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
   }
 
   team.sp -= skill.cost;
+  if(skill.oncePerTurn){
+    const ix = (card.skills || []).indexOf(skill);
+    if(ix >= 0) card.usedThisTurn[ix] = true;
+  }
 
   if(card.status === 'paralyze'){
     card.status = null;
@@ -442,7 +450,9 @@ function startTurn(tk){
 
   SLOTS.forEach(k => {
     const c = team.slots[k];
-    if(!c || !c.alive) return;
+    if(!c) return;
+    c.usedThisTurn = {};            // 「1ターン1回」制限をリセット
+    if(!c.alive) return;
 
     if(c.atkBuffTurns > 0){
       c.atkBuffTurns--;
@@ -487,7 +497,7 @@ function onEndTurn(){
   state.turn = 'enemy';
   startTurn('enemy');
   render();
-  if(!state.over) setTimeout(aiStep, 650);
+  if(!state.over) setTimeout(aiStep, 900);
 }
 
 function backToPlayer(){ state.turn = 'player'; startTurn('player'); render(); }
@@ -530,7 +540,7 @@ function aiStep(){
   });
 
   executeSkill('enemy', slotKey, skill, vt.teamKey, best);
-  if(!state.over) setTimeout(aiStep, 1000);
+  if(!state.over) setTimeout(aiStep, FX_TOTAL + 250);
   else render();
 }
 
@@ -541,7 +551,9 @@ function activateSkill(tk, sk, idx){
   const c = teams.player.slots[sk];
   if(!c || !c.alive || c.sealed > 0) return;
   const skill = skillAt(c, +idx);
+  if(!skillUnlocked(c.lv, +idx)) return;
   if(!canUse(sk, skill)) return;
+  if(skill.oncePerTurn && c.usedThisTurn[+idx]) return;
   if(teams.player.sp < skill.cost) return;
   if(validTargets('player', sk, skill).slots.length === 0) return;
   state.pendingAction = {slotKey:sk, skill};
