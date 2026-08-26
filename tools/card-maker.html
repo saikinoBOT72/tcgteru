@@ -203,7 +203,7 @@ const EFFECTS = {
   reflect:      {label:'自分の状態異常を敵に移す', p:[{k:'power',l:'威力(0可)',v:0}], flag:'reflectStatus'},
   heal:         {label:'味方1体を回復', p:[{k:'heal',l:'回復量',v:14}], friendly:true},
   healAll:      {label:'味方全体を回復', p:[{k:'healAll',l:'回復量',v:10}], friendly:true},
-  gainSP:       {label:'チームSPを回復(1ターン1回)', p:[{k:'gainSP',l:'回復量',v:3},{k:'selfDamage',l:'自傷ダメージ',v:8}], friendly:true, once:true, cost:2},
+  gainSP:       {label:'チームSPを回復(1ターン1回・SP2以上)', p:[{k:'gainSP',l:'回復量',v:3},{k:'selfDamage',l:'自傷ダメージ',v:8}], friendly:true, once:true, minCost:2},
   buffTarget:   {label:'味方1体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:20},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffTarget'},
   buffAll:      {label:'味方全体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:28},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffAll'},
   cleanse:      {label:'味方1体の状態異常を治療', p:[], friendly:true, flag:'cleanse'},
@@ -237,7 +237,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const slots = [
   {on:true,  role:'front', reach:'front', name:'だし巻きアタック', cost:1, eff:'attack',       st:'burn'},
   {on:true,  role:'front', reach:'front', name:'あまから包み',     cost:1, eff:'attackStatus', st:'burn'},
-  {on:true,  role:'back',  reach:'any',   name:'やさしい出汁',     cost:1, eff:'gainSP',       st:'poison'}
+  {on:true,  role:'back',  reach:'any',   name:'やさしい出汁',     cost:2, eff:'gainSP',       st:'poison'}
 ];
 
 Object.keys(ELEM).forEach(e => $('f_elem').add(new Option(e,e)));
@@ -299,7 +299,14 @@ function setRole(i,v){ slots[i].role = v; renderSlots(); update(); }
 function setReach(i,v){ slots[i].reach = v; renderSlots(); update(); }
 function setName(i,v){ slots[i].name = v; update(); }
 function setCost(i,v){ slots[i].cost = +v; update(); }
-function setEff(i,v){ slots[i].eff = v; Object.keys(slots[i]).forEach(k=>{ if(k.startsWith('p_')) delete slots[i][k]; }); renderSlots(); update(); }
+function setEff(i,v){
+  slots[i].eff = v;
+  Object.keys(slots[i]).forEach(k=>{ if(k.startsWith('p_')) delete slots[i][k]; });
+  /* SP回復のように最低コストが決まっている効果は、選んだ時点で引き上げる */
+  const mc = EFFECTS[v].minCost;
+  if(mc && slots[i].cost < mc) slots[i].cost = mc;
+  renderSlots(); update();
+}
 function setP(i,k,v){ slots[i]['p_'+k] = +v; update(); }
 function setSt(i,v){ slots[i].st = v; update(); }
 
@@ -504,6 +511,7 @@ function randomize(){
     s.on = i < count;
     s.role = Math.random() < .6 ? 'front' : 'back';
     s.eff = keys[Math.floor(Math.random()*keys.length)];
+    if(EFFECTS[s.eff].minCost && s.cost < EFFECTS[s.eff].minCost) s.cost = EFFECTS[s.eff].minCost;
     s.reach = Math.random() < .5 ? 'front' : 'any';
     s.cost = Math.random() < .25 ? 2 : 1;
     Object.keys(s).forEach(k => { if(k.startsWith('p_')) delete s[k]; });
