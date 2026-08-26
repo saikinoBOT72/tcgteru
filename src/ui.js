@@ -2,6 +2,16 @@
    ui.js — カード描画 / 画面更新 / 起動
    ========================================================= */
 
+/* ---- アート ------------------------------------------------
+   カードは自前SVG(ART)か切り出し画像(CARD_DB.img)のどちらかを持つ。
+   どちらでも同じ枠に object-fit:cover で嵌るので、外側の寸法は不変。
+   ------------------------------------------------------------ */
+function artHtml(id){
+  const t = CARD_DB[id];
+  if(t && t.img) return `<img class="art" src="${t.img}" alt="">`;
+  return `<svg class="art"><use href="#art-${id}"/></svg>`;
+}
+
 /* ---- スキル効果の短縮表記(カード内は極小フォントなので簡潔に) ---- */
 function skillDetail(s){
   const p = [];
@@ -73,6 +83,7 @@ function kingRow(k, lv){
    ctx = {tk, sk} を渡すとバトル用にタップ可能・状態バッジ付きになる。
    渡さなければ静的なカード表示。寸法とレイアウトはどちらも完全に同一。 */
 function cardFaceHtml(c, role, ctx){
+  const shownHp = c.shownHp === undefined ? c.hp : c.shownHp;
   const meta = ELEM[c.elem] || {};
   const rar = RARITY[c.rarity] || RARITY.N;
   const live = ctx && teams && state;
@@ -86,7 +97,7 @@ function cardFaceHtml(c, role, ctx){
     if(live){
       const usable = ctx.tk === 'player' && state.turn === 'player' && !state.over
         && !state.pendingAction && !state.moveMode
-        && c.alive && c.sealed <= 0
+        && c.alive && !c.locked
         && role === skill.role && teams.player.sp >= skill.cost;
       cx = {tk:ctx.tk, sk:ctx.sk, idx:i, usable};
     }
@@ -100,9 +111,15 @@ function cardFaceHtml(c, role, ctx){
   /* 状態は「何が・どれだけ・あと何ターン」まで出す */
   const st = [];
   if(live){
-    if(c.status) st.push(`<span class="st ${c.status}">${statusLabel(c.status)}<b>${c.statusTurns}T</b></span>`);
-    if(c.sealed > 0) st.push(`<span class="st seal">封印<b>${c.sealed}T</b></span>`);
-    if(c.stunned > 0) st.push(`<span class="st seal">スタン</span>`);
+    if(c.status){
+      const sp = STATUS_SPEC[c.status];
+      /* 何が・どれだけ・あと何ターンかまで出す */
+      const eff = sp.dot > 0 ? `-${sp.dot}/T`
+                : sp.lock    ? '行動不可'
+                : `攻${Math.round((sp.atkMod - 1) * 100)}%`;
+      st.push(`<span class="st ${c.status}">${sp.label} ${eff}<b>${c.statusTurns}T</b></span>`);
+    }
+    if(c.locked) st.push(`<span class="st seal">動けない</span>`);
     if(c.atkBuff > 0) st.push(`<span class="st up">攻+${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
     if(c.atkBuff < 0) st.push(`<span class="st down">攻${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
   }
@@ -113,13 +130,13 @@ function cardFaceHtml(c, role, ctx){
       <span class="c-name">${c.name}</span>
       <span class="c-rarity" style="border-color:${rar.frame};color:${rar.frame}">${c.rarity}</span>
     </div>
-    <div class="c-art"><svg class="art"><use href="#art-${c.tplId}"/></svg><span class="c-lv">Lv${lv}</span></div>
+    <div class="c-art">${artHtml(c.tplId)}${(CARD_DB[c.tplId] || {}).beta ? '<span class="c-beta">仮</span>' : ''}<span class="c-lv">Lv${lv}</span></div>
     <div class="c-stat">
       <span class="c-role${role === 'king' ? ' king' : ''}">${roleLabel(role)}</span>
       ${role !== 'king' ? `<span class="c-move${canMove ? ' usable' : ''}"${canMove ? ` onclick="event.stopPropagation();startMoveSource('${ctx.tk}','${ctx.sk}')"` : ''}>⇄</span>` : ''}
-      <span class="c-hp">${c.hp}/${c.maxHp}</span>
+      <span class="c-hp">${shownHp}/${c.maxHp}</span>
     </div>
-    <div class="c-hpbar"><i style="width:${Math.round(c.hp / c.maxHp * 100)}%"></i></div>
+    <div class="c-hpbar"><i style="width:${Math.round(shownHp / c.maxHp * 100)}%"></i></div>
     <div class="c-skills">${rows}${kingRow(c.king, lv)}</div>
     ${st.length ? `<div class="c-status">${st.join('')}</div>` : ''}`;
 }
@@ -130,7 +147,7 @@ function cardTile(tk, sk){
   const role = roleOf(sk);
 
   let cls = 'card-tile';
-  if(!c.alive) cls += ' dead';
+  if(c.shownAlive === false) cls += ' dead';
 
   const pa = state.pendingAction;
   let isTarget = false;
@@ -189,19 +206,6 @@ function render(){
   requestAnimationFrame(flushFx);
 }
 
-/* ---- アート/グラデーションの defs を組み立て ---- */
-function buildArtDefs(){
-  const grads = Object.keys(ELEM).map(e => {
-    const m = ELEM[e];
-    return `<radialGradient id="bg-${m.id}" cx="50%" cy="42%">
-      <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="${m.accent}59"/></radialGradient>`;
-  }).join('');
-  const syms = Object.keys(ART).map(id =>
-    `<symbol id="art-${id}" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid slice">${ART[id]}</symbol>`
-  ).join('');
-  document.getElementById('artDefs').innerHTML = `<defs>${grads}${syms}</defs>`;
-}
-
 /* =========================================================
    所持カード / デッキ / Lv
    ガチャ未実装のため、現状は全カードを所持している扱い。
@@ -209,8 +213,9 @@ function buildArtDefs(){
    編成画面のLvボタンで手動に上げ下げして挙動を確認できる。
    ========================================================= */
 const SLOT_ORDER = ['frontL','frontR','backL','backR','king'];
-const DEFAULT_DECK = ['ramen','cider','pudding','nuka','rice'];
-const DECK_KEY = 'tcgteru.deck.v2';
+/* 既定は正式カードのさいきの5枚(属性が1枚ずつ揃う) */
+const DEFAULT_DECK = ['sfire','sice','sbolt','spoison','splain'];
+const DECK_KEY = 'tcgteru.deck.v3';
 const LV_KEY   = 'tcgteru.levels.v1';
 
 function ownedCards(){ return CARD_IDS.slice(); }
@@ -218,6 +223,7 @@ function ownedCards(){ return CARD_IDS.slice(); }
 let playerDeck = DEFAULT_DECK.slice();
 let cardLevels = {};              // id -> 1..4
 let deckSelSlot = 0;
+let deckDetail = false;           // 一覧をカード現物で見るか
 
 function lvOf(id){ return cardLevels[id] || MAX_LV; }
 
@@ -284,7 +290,7 @@ function elemDot(e, size){
 /* ---- ホーム ---- */
 function miniCardHtml(id){
   const c = CARD_DB[id];
-  return `<div class="mini"><div class="mart"><svg><use href="#art-${id}"/></svg></div>
+  return `<div class="mini"><div class="mart">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}</div>
     <div class="mname">${c.name}</div><div class="mlv">Lv${lvOf(id)}</div></div>`;
 }
 
@@ -308,68 +314,102 @@ function renderHome(){
     </div>`;
 }
 
-/* ---- デッキ編成 ---- */
+/* ---- デッキ編成 --------------------------------------------
+   操作は2ステップだけ:
+     ① 上の陣形で「変えたい枠」をタップ
+     ② 下の一覧で「入れるカード」をタップ
+   置いたら選択が自動で次の枠へ進むので、上から順にタップし続ける
+   だけで5枠が埋まる。既に別の枠にいるカードを選ぶと入れ替わる。
+   ------------------------------------------------------------ */
+const DECK_STEP_LABEL = ['前衛 左', '前衛 右', '後衛 左', '後衛 右', '王'];
+
 function slotHtml(i){
   const id = playerDeck[i];
   const c = CARD_DB[id];
   const sel = deckSelSlot === i ? ' sel' : '';
-  const role = roleLabel(roleOf(SLOT_ORDER[i]));
   return `<div class="slot${sel}" onclick="selectDeckSlot(${i})">
-    <div class="srole">${role}</div>
-    ${c ? `<div class="sart"><svg><use href="#art-${id}"/></svg></div>
+    <div class="srole">${DECK_STEP_LABEL[i]}</div>
+    ${c ? `<div class="sart">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}</div>
            <div class="sname">${c.name}</div><div class="slv">Lv${lvOf(id)}</div>`
-        : `<div class="sempty">未設定</div><div class="sname">—</div>`}
+        : `<div class="sempty">未設定</div><div class="sname">—</div><div class="slv">—</div>`}
+    ${sel ? '<span class="sel-flag">ここ</span>' : ''}
+  </div>`;
+}
+
+/* 一覧のコンパクトタイル(既定表示) */
+function pickTileHtml(id){
+  const c = CARD_DB[id];
+  const at = playerDeck.indexOf(id);
+  const rar = RARITY[c.rarity] || RARITY.N;
+  return `<div class="pick${at >= 0 ? ' placed' : ''}" onclick="assignCard('${id}')">
+    <div class="part">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}
+      ${at >= 0 ? `<span class="pat">${DECK_STEP_LABEL[at]}</span>` : ''}</div>
+    <div class="pname">${c.name}</div>
+    <div class="pfoot">
+      ${elemDot(c.elem, 15)}
+      <span class="prar" style="color:${rar.frame};border-color:${rar.frame}">${c.rarity}</span>
+      <button class="plv" onclick="event.stopPropagation();cycleLv('${id}')">Lv${lvOf(id)}</button>
+    </div>
+  </div>`;
+}
+
+/* 一覧の詳細表示(カード現物。スキル調整の確認用) */
+function pickCardHtml(id){
+  const at = playerDeck.indexOf(id);
+  const inst = createCard(id, lvOf(id));
+  const role = at >= 0 ? roleOf(SLOT_ORDER[at]) : 'front';
+  return `<div class="deck-item">
+    <div class="card-tile${at >= 0 ? ' placed' : ''}" onclick="assignCard('${id}')">
+      ${cardFaceHtml(inst, role)}
+      ${at >= 0 ? `<span class="placed-tag">${DECK_STEP_LABEL[at]}</span>` : ''}
+    </div>
+    <button class="plv wide" onclick="event.stopPropagation();cycleLv('${id}')">Lv${lvOf(id)} ▸</button>
   </div>`;
 }
 
 function renderDeck(){
-  const list = ownedCards().map(id => {
-    const at = playerDeck.indexOf(id);
-    const inst = createCard(id, lvOf(id));
-    const role = at >= 0 ? roleOf(SLOT_ORDER[at]) : 'front';
-    const placedCls = at >= 0 ? ' placed' : '';
-    const tag = at >= 0 ? `<span class="placed-tag">${roleLabel(roleOf(SLOT_ORDER[at]))}</span>` : '';
-    return `<div class="deck-item">
-      <div class="card-tile${placedCls}" onclick="assignCard('${id}')">${cardFaceHtml(inst, role)}${tag}</div>
-      <div class="lv-ctl">
-        <button ${lvOf(id) <= 1 ? 'disabled' : ''} onclick="event.stopPropagation();bumpLv('${id}',-1)">−</button>
-        <span>Lv${lvOf(id)}</span>
-        <button ${lvOf(id) >= MAX_LV ? 'disabled' : ''} onclick="event.stopPropagation();bumpLv('${id}',1)">＋</button>
-      </div>
-    </div>`;
-  }).join('');
+  const list = deckDetail
+    ? `<div class="deck-grid">${ownedCards().map(pickCardHtml).join('')}</div>`
+    : `<div class="pick-grid">${ownedCards().map(pickTileHtml).join('')}</div>`;
 
-  const selName = CARD_DB[playerDeck[deckSelSlot]] ? CARD_DB[playerDeck[deckSelSlot]].name : '未設定';
   document.getElementById('screenDeck').innerHTML = `
     <div class="deck-head">
       <button class="back-btn" onclick="showScreen('home')">← 戻る</button>
       <h2>デッキ編成</h2>
+      <button class="back-btn" onclick="toggleDeckDetail()">${deckDetail ? '一覧で見る' : 'カードで見る'}</button>
     </div>
+
+    <div class="step"><b>1</b>変えたい枠をえらぶ</div>
     <div class="formation">
       <div class="form-row">${[0,1].map(slotHtml).join('')}</div>
       <div class="form-row">${[2,4,3].map(slotHtml).join('')}</div>
     </div>
-    <div class="deck-hint">
-      ${roleLabel(roleOf(SLOT_ORDER[deckSelSlot]))}枠(現在:${selName})に置くカードを下から選択
-    </div>
-    <div class="deck-list"><div class="deck-grid">${list}</div></div>
+
+    <div class="step"><b>2</b>「${DECK_STEP_LABEL[deckSelSlot]}」に入れるカードをえらぶ</div>
+    <div class="deck-list">${list}</div>
+
     <div class="deck-foot"><button class="end" onclick="startCpuBattle()">この編成でバトル</button></div>`;
 }
 
 function selectDeckSlot(i){ deckSelSlot = i; renderDeck(); }
+function toggleDeckDetail(){ deckDetail = !deckDetail; renderDeck(); }
 
-function bumpLv(id, d){
-  cardLevels[id] = Math.min(MAX_LV, Math.max(1, lvOf(id) + d));
+/* Lvはガチャ実装までの確認用。タップで 1→2→3→4→1 と回す */
+function cycleLv(id){
+  cardLevels[id] = lvOf(id) >= MAX_LV ? 1 : lvOf(id) + 1;
   saveState();
   renderDeck();
 }
 
 function assignCard(id){
   const existing = playerDeck.indexOf(id);
-  if(existing === deckSelSlot) return;
-  if(existing >= 0) playerDeck[existing] = playerDeck[deckSelSlot];
-  playerDeck[deckSelSlot] = id;
-  saveState();
+  if(existing !== deckSelSlot){
+    /* 既に別の枠にいるカードなら、その枠と中身を交換する */
+    if(existing >= 0) playerDeck[existing] = playerDeck[deckSelSlot];
+    playerDeck[deckSelSlot] = id;
+    saveState();
+  }
+  deckSelSlot = (deckSelSlot + 1) % SLOT_ORDER.length;   // 次の枠へ自動で進む
   renderDeck();
 }
 

@@ -42,7 +42,36 @@ const RARITY = {
   UR: {label:'UR', rank:3, frame:'#8331ad', gachaWeight:1}
 };
 
-const STATUS_LABEL = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺', stun:'スタン', seal:'封印'};
+/* ---- 状態異常の価値表 ----------------------------------------
+   全ての状態異常を「与ダメージ換算で 14〜16」に揃えてある。
+   共有SP制では『1体の行動を潰す』だけでは他のカードで代替できて
+   しまうため、行動封じ系は SP も 1 奪って初めて 1 アクション分の
+   価値になる。効果は次の3系統だけに整理した:
+
+     ① 継続ダメージ … dot × turns
+        やけど 7×2 = 14 / 毒 4×4 = 16
+     ② 行動封じ     … lock。ターン開始時に「そのカードは今ターン
+        行動不可」+ チームSP-1。1アクション ≒ 16 相当
+        凍結 / スタン / 封印
+     ③ 弱体         … atkMod。そのカードの与ダメージに倍率
+        麻痺 0.55倍 ×2T ≒ 2回分の半減 ≒ 15 相当
+
+   カード側の付与確率は「威力 + 確率 × 実効価値 ≒ 同コストの
+   単純攻撃 + 少し」になるよう data 側で決めている。
+   ---------------------------------------------------------------- */
+const STATUS_SPEC = {
+  burn    : {label:'やけど', turns:2, dot:7, lock:false, atkMod:1   },
+  poison  : {label:'毒',     turns:4, dot:4, lock:false, atkMod:1   },
+  freeze  : {label:'凍結',   turns:1, dot:0, lock:true,  atkMod:1   },
+  stun    : {label:'スタン', turns:1, dot:0, lock:true,  atkMod:1   },
+  seal    : {label:'封印',   turns:1, dot:0, lock:true,  atkMod:1   },
+  paralyze: {label:'麻痺',   turns:2, dot:0, lock:false, atkMod:.55 }
+};
+/* 行動封じが奪うチームSP */
+const LOCK_SP_DRAIN = 1;
+
+const STATUS_LABEL = {};
+Object.keys(STATUS_SPEC).forEach(k => { STATUS_LABEL[k] = STATUS_SPEC[k].label; });
 
 /* =========================================================
    Lv システム
@@ -190,7 +219,9 @@ feast:`<rect width="100" height="50" fill="url(#bg-none)"/>
 };
 
 /* =========================================================
-   カードDB(全10枚 / 属性ごと2枚)
+   カードDB(全15枚)
+   ・さいきの族5枚 … 正式カード
+   ・それ以外10枚  … ベータテスト用の仮カード(beta:true → 札に「仮」)
    ── 設計方針 ──
    ・レアリティで素の数値を吊り上げず、HPと威力は「硬い＝低火力 /
      脆い＝高火力」のトレードで散らす。レアリティ差はスキルの
@@ -200,69 +231,104 @@ feast:`<rect width="100" height="50" fill="url(#bg-none)"/>
    ========================================================= */
 const CARD_DB = {
   /* ---------------- 炎 ---------------- */
-  ramen:{name:'湯気立つラーメン', elem:'炎', rarity:'N', hp:54,
+  ramen:{beta:true, name:'湯気立つラーメン', elem:'炎', rarity:'N', hp:54,
     skills:[ F({name:'熱々スープ', power:17}),
              B({name:'湯気の癒し', power:0, friendly:true, heal:18}),
              F({name:'追い油', cost:2, power:28}) ],
     king:{name:'出汁の温もり', desc:'ターン開始時に王HP+4', trigger:'turnHeal', value:4}},
 
-  chili:{name:'火吹きチリドッグ', elem:'炎', rarity:'R', hp:48,
+  chili:{beta:true, name:'火吹きチリドッグ', elem:'炎', rarity:'R', hp:48,
     skills:[ F({name:'激辛かぶりつき', power:20}),
-             F({name:'火炎ブレス', power:12, status:{type:'burn', chance:.6}}),
+             F({name:'火炎ブレス', power:13, status:{type:'burn', chance:.55}}),
              B({name:'香辛料の鼓舞', power:0, friendly:true, buffAll:{amount:.2, turns:2}}) ],
     king:{name:'灼熱の意地', desc:'味方が倒れる毎に攻+12%', trigger:'rage', value:.12}},
 
   /* ---------------- 氷 ---------------- */
-  pudding:{name:'ゆれるプリン', elem:'氷', rarity:'N', hp:50,
+  pudding:{beta:true, name:'ゆれるプリン', elem:'氷', rarity:'N', hp:50,
     skills:[ F({name:'ぷるんアタック', power:17}),
              B({name:'ひんやり鎮静', power:0, debuffAtk:{amount:.3, turns:2}}),
-             F({name:'カラメル固め', power:13, status:{type:'freeze', chance:.35}}) ],
+             F({name:'カラメル固め', power:12, status:{type:'freeze', chance:.4}}) ],
     king:{name:'なめらか回避', desc:'前衛2枚生存で被ダメ-12%', trigger:'frontGuard', value:.12}},
 
-  sorbet:{name:'氷結ソルベ', elem:'氷', rarity:'SR', hp:56,
+  sorbet:{beta:true, name:'氷結ソルベ', elem:'氷', rarity:'SR', hp:56,
     skills:[ F({name:'氷刃スプーン', power:18}),
-             F({name:'絶対零度', cost:2, power:27, status:{type:'freeze', chance:.35}}),
+             F({name:'絶対零度', cost:2, power:20, status:{type:'freeze', chance:.6}}),
              B({cost:2, name:'再生のシロップ', power:0, friendly:true, revive:{hpPct:.4}, targetDead:true}) ],
     king:{name:'静寂の守り', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
 
   /* ---------------- 毒 ---------------- */
-  nuka:{name:'ぬか漬けマスター', elem:'毒', rarity:'N', hp:52,
+  nuka:{beta:true, name:'ぬか漬けマスター', elem:'毒', rarity:'N', hp:52,
     skills:[ F({name:'漬け込みパンチ', power:17}),
-             F({name:'発酵の刺', power:13, status:{type:'poison', chance:.8}}),
+             F({name:'発酵の刺', power:13, status:{type:'poison', chance:.5}}),
              B({name:'床の手入れ', power:0, friendly:true, cleanse:true, buffTarget:{amount:.12, turns:2}}) ],
     king:{name:'熟成の妙', desc:'状態異常の敵に+4', trigger:'statusBonus', value:4}},
 
-  mushroom:{name:'妖しいキノコ鍋', elem:'毒', rarity:'R', hp:48,
+  mushroom:{beta:true, name:'妖しいキノコ鍋', elem:'毒', rarity:'R', hp:48,
     skills:[ F({name:'胞子スプラッシュ', power:18}),
              B({name:'痺れ胞子', power:0, debuffAll:{amount:.22, turns:2}}),
-             F({cost:2, name:'猛毒煮込み', power:24, status:{type:'poison', chance:1}}) ],
+             F({cost:2, name:'猛毒煮込み', power:20, status:{type:'poison', chance:1}}) ],
     king:{name:'菌糸の増殖', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
 
   /* ---------------- 雷 ---------------- */
-  cider:{name:'はじけるサイダー', elem:'雷', rarity:'N', hp:46,
+  cider:{beta:true, name:'はじけるサイダー', elem:'雷', rarity:'N', hp:46,
     skills:[ F({name:'泡ショット', power:15}),
-             F({name:'しびれ炭酸', power:11, status:{type:'paralyze', chance:.35}}),
+             F({name:'しびれ炭酸', power:12, status:{type:'paralyze', chance:.45}}),
              B({name:'気付けの一杯', power:0, friendly:true, gainSP:2, oncePerTurn:true}) ],
     king:{name:'爽快感', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
 
-  jelly:{name:'帯電ゼリー', elem:'雷', rarity:'R', hp:50,
+  jelly:{beta:true, name:'帯電ゼリー', elem:'雷', rarity:'R', hp:50,
     skills:[ F({name:'放電タックル', power:16}),
              B({name:'電力供給', power:0, friendly:true, gainSP:2, oncePerTurn:true}),
-             F({cost:2, name:'雷撃スパーク', power:26, status:{type:'paralyze', chance:.4}}) ],
+             F({cost:2, name:'雷撃スパーク', power:20, status:{type:'paralyze', chance:.7}}) ],
     king:{name:'導通', desc:'味方が状態異常付与で追加5', trigger:'onStatusInflict', value:5}},
 
   /* ---------------- 無 ---------------- */
-  rice:{name:'大盛りごはん', elem:'無', rarity:'N', hp:62,
+  rice:{beta:true, name:'大盛りごはん', elem:'無', rarity:'N', hp:62,
     skills:[ F({name:'どっしり体当たり', power:15}),
              B({name:'おかわり配給', power:0, friendly:true, healAll:9}),
              F({cost:2, name:'山盛りプレス', power:26}) ],
     king:{name:'満腹の安心', desc:'後衛2枚生存で毎T 王HP+5', trigger:'backHeal', value:5}},
 
-  feast:{name:'五段重の宴', elem:'無', rarity:'UR', hp:58,
+  feast:{beta:true, name:'五段重の宴', elem:'無', rarity:'UR', hp:58,
     skills:[ F({name:'祝いの一撃', power:19}),
              F({cost:2, name:'重箱返し', power:26, swapEnemy:true}),
              B({cost:2, name:'一年の計', power:0, friendly:true, healAll:12, cleanse:true}) ],
-    king:{name:'五段の祝', desc:'5枚全員生存で全体+18%', trigger:'fullBoard', value:.18}}
+    king:{name:'五段の祝', desc:'5枚全員生存で全体+18%', trigger:'fullBoard', value:.18}},
+
+  /* ================= さいきの族(正式カード / N) =================
+     初の非(仮)カード。属性1体ずつの5枚で、それぞれ
+     「単純攻撃 → 状態異常 or 支援 → 3枠目」の素直な構成にしてある。
+     アートは pixel art の切り出し画像(assets/)。
+     ============================================================== */
+  sfire:{name:'炎のさいきの', elem:'炎', rarity:'N', hp:52, img:'assets/saikino-fire.png',
+    skills:[ F({name:'火の粉', power:17}),
+             F({name:'焦がす息', power:13, status:{type:'burn', chance:.55}}),
+             B({name:'熾火の手当て', power:0, friendly:true, heal:16}) ],
+    king:{name:'燃え残り', desc:'味方が倒れる毎に攻+10%', trigger:'rage', value:.10}},
+
+  sice:{name:'氷のさいきの', elem:'氷', rarity:'N', hp:56, img:'assets/saikino-ice.png',
+    skills:[ F({name:'氷のひとつき', power:16}),
+             F({name:'こごえる霧', power:12, status:{type:'freeze', chance:.5}}),
+             B({name:'静かな治癒', power:0, friendly:true, cleanse:true, heal:15}) ],
+    king:{name:'凍てつく守り', desc:'前衛2枚生存で被ダメ-12%', trigger:'frontGuard', value:.12}},
+
+  sbolt:{name:'雷のさいきの', elem:'雷', rarity:'N', hp:44, img:'assets/saikino-bolt.png',
+    skills:[ F({name:'帯電突進', power:16}),
+             B({name:'雷気供給', power:0, friendly:true, gainSP:2, oncePerTurn:true}),
+             F({name:'しびれ放電', power:11, status:{type:'paralyze', chance:.45}}) ],
+    king:{name:'高電圧', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
+
+  spoison:{name:'毒のさいきの', elem:'毒', rarity:'N', hp:53, img:'assets/saikino-poison.png',
+    skills:[ F({name:'胞子突き', power:17}),
+             F({name:'毒の胞子', power:14, status:{type:'poison', chance:.6}}),
+             B({name:'腐食の霧', power:0, debuffAll:{amount:.2, turns:2}}) ],
+    king:{name:'蝕み', desc:'状態異常の敵に+4', trigger:'statusBonus', value:4}},
+
+  splain:{name:'無のさいきの', elem:'無', rarity:'N', hp:58, img:'assets/saikino-plain.png',
+    skills:[ F({name:'ぶちかまし', power:17}),
+             B({name:'隊列の整え', power:0, friendly:true, healAll:8}),
+             F({cost:2, name:'渾身のぶちかまし', power:30}) ],
+    king:{name:'素の力', desc:'ターン毎に攻+6% 最大30%', trigger:'rampUp', value:.06, max:.30}}
 };
 
 const CARD_IDS = Object.keys(CARD_DB);

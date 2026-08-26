@@ -125,6 +125,7 @@ button.act.primary{background:var(--ink); color:var(--ground);}
   </div>
   <div id="slots"></div>
   <p class="hint">目安:前衛は単純攻撃 / 弱い攻撃+状態異常 / SP2以上の重撃。後衛はSP回復や支援。全体攻撃はロスター全体で少数に。</p>
+  <div class="model" id="statusRef"></div>
 </fieldset>
 
 <fieldset>
@@ -168,16 +169,34 @@ const ELEM = {
   '無':{accent:'#71807a', svg:'<circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="2.4"/>'}
 };
 const RARITY = {N:'#8d8d8d', R:'#3f7fc2', SR:'#c9a227', UR:'#9b3fc2'};
-const STATUS = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
+/* 本編 src/data.js の STATUS_SPEC と同じ値。すべて与ダメ換算 14〜16 に揃っている。
+   実効価値は「継続ダメージは相手が先に死ぬと無駄になる」ぶん 0.65 掛けで見積もる */
+const STATUS_SPEC = {
+  burn    : {label:'やけど', turns:2, dot:7, lock:false, atkMod:1,   note:'7ダメ×2T = 14'},
+  poison  : {label:'毒',     turns:4, dot:4, lock:false, atkMod:1,   note:'4ダメ×4T = 16'},
+  freeze  : {label:'凍結',   turns:1, dot:0, lock:true,  atkMod:1,   note:'1T行動不可 + チームSP-1 ≒ 16'},
+  paralyze: {label:'麻痺',   turns:2, dot:0, lock:false, atkMod:.55, note:'与ダメ×0.55 を2T ≒ 14'}
+};
+const STATUS = {}; Object.keys(STATUS_SPEC).forEach(k => STATUS[k] = STATUS_SPEC[k].label);
+/* 1アクションの価値 ≒ SP1の単純攻撃の威力 */
+const ACTION_VALUE = 16;
+const statusValue = t => {
+  const v = STATUS_SPEC[t]; if(!v) return 0;
+  if(v.dot > 0) return v.dot * v.turns * 0.65;
+  if(v.lock)    return ACTION_VALUE * v.turns;
+  return ACTION_VALUE * (1 - v.atkMod) * v.turns;
+};
+/* 同コストの単純攻撃の目安威力 */
+const plainPower = cost => cost <= 1 ? 17 : 28 * (cost - 1);
 
 /* 前衛/後衛で共通の効果プール。role とは独立に選べる */
 const EFFECTS = {
   attack:       {label:'単純攻撃', p:[{k:'power',l:'威力',v:16}]},
-  attackStatus: {label:'攻撃 + 状態異常', p:[{k:'power',l:'威力',v:10},{k:'chance',l:'付与率 %',v:30}], status:true},
+  attackStatus: {label:'攻撃 + 状態異常', p:[{k:'power',l:'威力',v:13},{k:'chance',l:'付与率 %',v:55}], status:true},
   allEnemies:   {label:'敵全体に攻撃', p:[{k:'power',l:'威力',v:5}], all:true},
-  statusOnly:   {label:'状態異常だけ付与(ダメージなし)', p:[{k:'chance',l:'付与率 %',v:40}], status:true},
-  stun:         {label:'攻撃 + スタン', p:[{k:'power',l:'威力',v:9}], flag:'stun'},
-  seal:         {label:'攻撃 + スキル封印', p:[{k:'power',l:'威力',v:10}], flag:'sealTarget'},
+  statusOnly:   {label:'状態異常だけ付与(ダメージなし)', p:[{k:'chance',l:'付与率 %',v:90}], status:true},
+  stun:         {label:'攻撃 + スタン(必中の行動封じ)', p:[{k:'power',l:'威力',v:4}], flag:'stun'},
+  seal:         {label:'攻撃 + スキル封印(必中の行動封じ)', p:[{k:'power',l:'威力',v:4}], flag:'sealTarget'},
   swap:         {label:'攻撃 + 陣形かく乱', p:[{k:'power',l:'威力',v:12}], flag:'swapEnemy'},
   drainSP:      {label:'敵チームのSPを削る', p:[{k:'power',l:'威力(0可)',v:0},{k:'drainSP',l:'削る量',v:1}]},
   reflect:      {label:'自分の状態異常を敵に移す', p:[{k:'power',l:'威力(0可)',v:0}], flag:'reflectStatus'},
@@ -224,6 +243,13 @@ Object.keys(ELEM).forEach(e => $('f_elem').add(new Option(e,e)));
 Object.keys(RARITY).forEach(r => $('f_rarity').add(new Option(r,r)));
 $('f_rarity').value = 'R';
 Object.entries(KING_TRIGGERS).forEach(([k,v]) => $('k_trigger').add(new Option(v.label,k)));
+
+/* 状態異常の価値表を画面に出しておく(調整時の基準) */
+$('statusRef').innerHTML = '<b>状態異常はすべて与ダメ換算 14〜16 に揃えてある</b><br>'
+  + Object.values(STATUS_SPEC).map(v => `${v.label} … ${v.note}`).join(' / ')
+  + '<br>目安の式:<b>威力 + 付与率 × 実効価値 ≒ 同SPの単純攻撃(SP1で17 / SP2で28)</b>。'
+  + 'スタン・封印は必中なので、SP1に載せるなら威力はほぼ0にする。';
+
 
 /* ---- スキル枠のUI ---- */
 function renderSlots(){
@@ -393,11 +419,30 @@ function checks(c){
         w.push(`「${s.name}」はSP${cost}なので威力 ${base.skill.power*cost} 前後が目安(現在${s.power})`);
     }
   });
-  const cap = {N:20,R:24,SR:28,UR:32}[c.rarity];
-  c.list.forEach(e => { if((e.skill.cost||1) === 1 && e.skill.power > cap && !e.skill.allEnemies)
-    w.push(`「${e.skill.name}」はSP1で威力${e.skill.power}。${c.rarity}の既存上限は約${cap}`); });
-  const hpCap = {N:45,R:48,SR:52,UR:62}[c.rarity];
-  if(c.hp > hpCap) w.push(`${c.rarity}としてHPが高い(既存の上限は${hpCap})`);
+  /* レアリティで素の数値は吊り上げない設計なので、上限は全レア共通で見る。
+     レアリティ差は「効果の種類・複合度」で付ける */
+  c.list.forEach(e => {
+    const s2 = e.skill, cost = s2.cost || 1;
+    if(cost === 1 && s2.power > 20 && !s2.allEnemies)
+      w.push(`「${s2.name}」はSP1で威力${s2.power}。現行ロスターのSP1上限は20`);
+  });
+  if(c.hp < 40 || c.hp > 62) w.push(`HP ${c.hp} は現行の幅(40〜62)の外`);
+
+  /* 状態異常つきスキルの期待値が、同コストの単純攻撃から離れすぎていないか */
+  c.list.forEach(e => {
+    const s2 = e.skill, cost = s2.cost || 1;
+    let bonus = 0, what = '';
+    if(s2.status){ bonus = s2.status.chance * statusValue(s2.status.type); what = STATUS[s2.status.type] + Math.round(s2.status.chance*100) + '%'; }
+    else if(s2.stun){ bonus = statusValue('freeze'); what = 'スタン(必中)'; }
+    else if(s2.sealTarget){ bonus = statusValue('freeze'); what = '封印(必中)'; }
+    if(!what) return;
+    const ev = (s2.power || 0) + bonus, base = plainPower(cost);
+    if(ev > base * 1.22)
+      w.push(`「${s2.name}」の期待値 ${ev.toFixed(0)} は同SPの単純攻撃 ${base} より強すぎる(${what})。威力を ${Math.max(0, Math.round(base*1.08 - bonus))} 前後に`);
+    else if(ev < base * 0.9)
+      w.push(`「${s2.name}」の期待値 ${ev.toFixed(0)} は同SPの単純攻撃 ${base} より弱い(${what})。威力を ${Math.round(base*1.08 - bonus)} 前後に`);
+  });
+
   $('warns').innerHTML = w.length ? w.map(x=>`<div class="warn">${esc(x)}</div>`).join('')
     : '<div class="ok">バランス上の警告なし</div>';
 }

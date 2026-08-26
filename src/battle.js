@@ -15,10 +15,15 @@ function createCard(id, lv){
   const t = CARD_DB[id];
   return {
     tplId:id, name:t.name, elem:t.elem, rarity:t.rarity, hp:t.hp, maxHp:t.hp,
+    /* 表示用の写し。演出が着弾した瞬間に hp/alive から更新される。
+       これがないと「殴る前にHPが減っている」画になる */
+    shownHp:t.hp, shownAlive:true,
     lv: Math.min(MAX_LV, Math.max(1, lv || 1)),
     skills:t.skills, king:t.king,
     status:null, statusTurns:0, alive:true, usedThisTurn:{},
-    atkBuff:0, atkBuffTurns:0, sealed:0, stunned:0, freeMove:false
+    /* locked = 行動封じ系の状態異常で「今ターンは動けない」 */
+    locked:false, lockedBy:'',
+    atkBuff:0, atkBuffTurns:0, freeMove:false
   };
 }
 
@@ -34,9 +39,18 @@ function makeTeam(ids){
   };
 }
 
-function newBattle(playerIds, enemyIds){
+/* ---- 後攻補正 ----------------------------------------------
+   毎ターンSP+1の共有プール制では、先攻が常に一手先にSPを使える
+   ぶんだけ有利になる(補正なしのミラー400戦で先攻55.8%)。
+   後攻側は初期SPを1持った状態で始めることで、初手のSP差を消す。
+   ------------------------------------------------------------ */
+const SECOND_PLAYER_SP = 1;
+
+function newBattle(playerIds, enemyIds, first){
   teams = {player:makeTeam(playerIds), enemy:makeTeam(enemyIds)};
-  state = {turn:'player', over:false, winner:null,
+  const f = first || 'player';
+  teams[foe(f)].sp = SECOND_PLAYER_SP;
+  state = {turn:f, over:false, winner:null,
            pendingAction:null, moveMode:false, moveSource:null};
 }
 
@@ -68,6 +82,10 @@ function isFullBoard(tk){ return aliveSlots(tk).length === 5; }
 function attackMult(tk, card){
   let m = 1 + (card.atkBuff || 0);
   const t = teams[tk];
+
+  /* 弱体系の状態異常(麻痺など)は与ダメージに倍率で効く */
+  const spec = STATUS_SPEC[card.status];
+  if(spec && spec.atkMod !== 1) m *= spec.atkMod;
 
   const rage = kingTrig(tk, 'rage');
   if(rage) m *= (1 + rage.value * t.fallenCount);
@@ -200,9 +218,11 @@ function judgeTimeUp(){
 function inflictStatus(atkTk, defTk, defSlot, type, fx){
   const c = teams[defTk].slots[defSlot];
   if(!c || !c.alive) return;
+  const spec = STATUS_SPEC[type];
+  if(!spec) return;
   c.status = type;
-  c.statusTurns = type === 'burn' ? 2 : type === 'poison' ? 3 : 1;
-  if(fx) fx.statusText = statusLabel(type) + '!';
+  c.statusTurns = spec.turns;
+  if(fx) fx.statusText = spec.label + '!';
 
   // 王スキル: 味方が状態異常を付与したとき追加ダメージ
   const on = kingTrig(atkTk, 'onStatusInflict');
@@ -262,7 +282,7 @@ function canUse(slotKey, skill){ return !!skill && roleOf(slotKey) === skill.rol
 /* その枠から今使えるスキルを [{idx, skill}] で返す */
 function usableSkills(tk, slotKey){
   const c = teams[tk].slots[slotKey];
-  if(!c || !c.alive || c.sealed > 0) return [];
+  if(!c || !c.alive || c.locked) return [];
   return (c.skills || []).map((sk, idx) => ({idx, skill:sk}))
     .filter(o => skillUnlocked(c.lv, o.idx) && canUse(slotKey, o.skill)
              && !(o.skill.oncePerTurn && c.usedThisTurn[o.idx]));
@@ -276,18 +296,11 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
   const card = team.slots[slotKey];
   if(!card || !card.alive || team.sp < skill.cost) return;
 
-  if(card.sealed > 0){
-    queueFx({attacker:{team:atkTk, slot:slotKey}, attackerTag:'スキル封印中'});
-    return;
-  }
-  if(card.status === 'freeze'){
-    team.sp -= skill.cost; card.status = null;
-    queueFx({attacker:{team:atkTk, slot:slotKey}, attackerTag:'凍結で動けない'});
-    clearSelection(); render(); return;
-  }
-  if(card.stunned > 0){
-    team.sp -= skill.cost; card.stunned--;
-    queueFx({attacker:{team:atkTk, slot:slotKey}, attackerTag:'スタンで動けない'});
+  /* 行動封じ中は動けない。代償(チームSP-1)はターン開始時に
+     すでに支払っているので、ここではSPを二重に取らない。 */
+  if(card.locked){
+    queueFx({attacker:{team:atkTk, slot:slotKey},
+             attackerTag:(card.lockedBy || '行動不能') + 'で動けない'});
     clearSelection(); render(); return;
   }
 
@@ -295,14 +308,6 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
   if(skill.oncePerTurn){
     const ix = (card.skills || []).indexOf(skill);
     if(ix >= 0) card.usedThisTurn[ix] = true;
-  }
-
-  if(card.status === 'paralyze'){
-    card.status = null;
-    if(Math.random() < .5){
-      queueFx({attacker:{team:atkTk, slot:slotKey}, attackerTag:'しびれて失敗'});
-      clearSelection(); render(); return;
-    }
   }
 
   const target = teams[tTk].slots[tSlot];
@@ -401,8 +406,8 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
     const chance = skill.critStatus ? Math.min(1, skill.status.chance + .25) : skill.status.chance;
     if(Math.random() < chance) inflictStatus(atkTk, tTk, tSlot, skill.status.type, fx);
   }
-  if(skill.stun && target && target.alive){ target.stunned = 1; fx.statusText = 'スタン!'; }
-  if(skill.sealTarget && target && target.alive){ target.sealed = 2; fx.statusText = '封印!'; }
+  if(skill.stun && target && target.alive) inflictStatus(atkTk, tTk, tSlot, 'stun', fx);
+  if(skill.sealTarget && target && target.alive) inflictStatus(atkTk, tTk, tSlot, 'seal', fx);
   if(skill.debuffAtk && target && target.alive){
     target.atkBuff = -skill.debuffAtk.amount;
     target.atkBuffTurns = skill.debuffAtk.turns;
@@ -442,6 +447,8 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
    ========================================================= */
 function startTurn(tk){
   const team = teams[tk];
+  /* 前のターンの演出は出切っているので、表示を実データに合わせ直す */
+  SLOTS.forEach(k => { const c = team.slots[k]; if(c){ c.shownHp = c.hp; c.shownAlive = c.alive; } });
   team.sp += 1;
   team.turnCount++;
   team.rampUp = team.turnCount;
@@ -452,22 +459,33 @@ function startTurn(tk){
     const c = team.slots[k];
     if(!c) return;
     c.usedThisTurn = {};            // 「1ターン1回」制限をリセット
+    c.locked = false; c.lockedBy = '';
     if(!c.alive) return;
 
     if(c.atkBuffTurns > 0){
       c.atkBuffTurns--;
       if(c.atkBuffTurns <= 0) c.atkBuff = 0;
     }
-    if(c.sealed > 0) c.sealed--;
 
-    if(c.status === 'burn' || c.status === 'poison'){
-      const d = c.status === 'burn' ? 2 : 3;
-      c.hp = Math.max(0, c.hp - d);
-      queueFx({target:{team:tk, slot:k}, targetText:'-' + d, targetKind:'damage', noProjectile:true});
-      c.statusTurns--;
-      if(c.statusTurns <= 0) c.status = null;
-      if(c.hp <= 0) killCard(tk, k);
+    /* 状態異常は全て STATUS_SPEC の1つの表から処理する */
+    const spec = STATUS_SPEC[c.status];
+    if(!spec) return;
+
+    if(spec.dot > 0){
+      c.hp = Math.max(0, c.hp - spec.dot);
+      queueFx({target:{team:tk, slot:k}, targetText:'-' + spec.dot,
+               targetKind:'damage', noProjectile:true});
     }
+    if(spec.lock){
+      c.locked = true; c.lockedBy = spec.label;
+      team.sp = Math.max(0, team.sp - LOCK_SP_DRAIN);
+      queueFx({target:{team:tk, slot:k}, targetText:spec.label + ' SP-' + LOCK_SP_DRAIN,
+               targetKind:'block', noProjectile:true});
+    }
+
+    c.statusTurns--;
+    if(c.statusTurns <= 0){ c.status = null; c.statusTurns = 0; }
+    if(c.hp <= 0) killCard(tk, k);
   });
   if(state.over) return;
 
@@ -497,7 +515,7 @@ function onEndTurn(){
   state.turn = 'enemy';
   startTurn('enemy');
   render();
-  if(!state.over) setTimeout(aiStep, 900);
+  if(!state.over) setTimeout(aiStep, 1100);
 }
 
 function backToPlayer(){ state.turn = 'player'; startTurn('player'); render(); }
@@ -549,7 +567,7 @@ function activateSkill(tk, sk, idx){
   if(state.over || state.turn !== 'player' || tk !== 'player') return;
   if(state.pendingAction || state.moveMode) return;
   const c = teams.player.slots[sk];
-  if(!c || !c.alive || c.sealed > 0) return;
+  if(!c || !c.alive || c.locked) return;
   const skill = skillAt(c, +idx);
   if(!skillUnlocked(c.lv, +idx)) return;
   if(!canUse(sk, skill)) return;
