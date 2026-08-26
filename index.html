@@ -22,13 +22,15 @@ body{
   background:var(--paper); color:var(--ink);
   font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
   display:flex; flex-direction:column; overflow:hidden;
-  height:100dvh; padding:6px; gap:var(--gap);
+  height:100dvh; padding:6px;
   max-width:520px; margin:0 auto;
 }
+.screen{display:none; flex:1 1 auto; min-height:0; flex-direction:column; gap:var(--gap);}
+.screen.active{display:flex;}
 
 #topbar{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; height:22px;}
-#topbar h1{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:14px; margin:0;}
-#resetBtn{font-size:11px; padding:2px 8px; border-radius:7px;}
+#topbar h1{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:14px; margin:0; flex:1 1 auto;}
+#resetBtn,#homeBtn{font-size:11px; padding:2px 8px; border-radius:7px;}
 
 .board{flex:1 0 auto; display:flex; flex-direction:column; gap:var(--gap); align-items:center; justify-content:center;}
 .teamsp{flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; height:14px;}
@@ -124,7 +126,7 @@ button:disabled{opacity:0.3; cursor:default;}
 }
 .sk-body{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center;}
 .sk-name{font-size:.92em; font-weight:700; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.sk-detail{font-size:.78em; line-height:1.05; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.sk-detail{font-size:.73em; line-height:1.05; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .sk-go{flex:0 0 auto; font-size:.7em; color:var(--ok); font-weight:900;}
 .sk.usable{cursor:pointer;}
 .sk.usable::before{content:''; position:absolute; left:0; top:0; bottom:0; width:.22em; background:var(--ok);}
@@ -159,6 +161,71 @@ button:disabled{opacity:0.3; cursor:default;}
 .fx-ringbox{position:absolute; transform:translate(-50%,-50%); border:3px solid #000; border-radius:.6em; box-sizing:border-box;}
 .fx-burst{position:absolute; transform:translate(-50%,-50%); width:74px; height:74px;}
 
+/* ================= HOME ================= */
+#screenHome{justify-content:center; align-items:center; gap:0; padding-bottom:8px;}
+.home-title{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:30px; letter-spacing:.02em; margin:0;}
+.home-sub{font-size:11px; color:var(--sub); margin:4px 0 0;}
+.home-crest{display:flex; gap:6px; margin:18px 0 22px;}
+.home-crest span{
+  width:34px; height:34px; border-radius:50%; border:2px solid var(--ink);
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  box-shadow:0 2px 0 var(--ink);
+}
+.home-menu{display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px;}
+.menu-btn{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  border:2px solid var(--ink); border-radius:12px; padding:13px 14px; font-size:15px;
+  background:var(--paper); box-shadow:3px 3px 0 var(--ink);
+}
+.menu-btn:active:not(:disabled){transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink);}
+.menu-btn.primary{background:var(--ink); color:var(--paper);}
+.menu-btn .mi{font-size:19px; flex:0 0 auto;}
+.menu-btn .msub{display:block; font-size:10px; font-weight:400; opacity:.75; margin-top:2px;}
+.home-deck{margin-top:20px; display:flex; flex-direction:column; align-items:center; gap:5px;}
+.home-deck-label{font-size:10px; color:var(--sub); font-weight:700;}
+.mini-row{display:flex; gap:4px; justify-content:center;}
+.mini{
+  width:38px; border:1.5px solid var(--ink); border-radius:5px; overflow:hidden; background:var(--paper);
+  display:flex; flex-direction:column;
+}
+.mini .mart{height:24px; position:relative;}
+.mini .mart svg{position:absolute; inset:0; width:100%; height:100%;}
+.mini .mname{font-size:6px; font-weight:700; text-align:center; padding:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--ink);}
+
+/* ================= DECK ================= */
+:root{ --dcard-w:calc((min(100vw,520px) - 22px) / 3); --dcard-h:calc(var(--dcard-w) * 1.4); }
+#screenDeck{gap:5px;}
+.deck-head{flex:0 0 auto; display:flex; align-items:center; gap:8px; height:26px;}
+.deck-head h2{font-family:"Zen Maru Gothic",sans-serif; font-size:14px; margin:0; flex:1 1 auto;}
+.back-btn{font-size:11px; padding:3px 9px; border-radius:7px;}
+.formation{flex:0 0 auto; border:1.5px solid var(--ink); border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:5px; align-items:center;}
+.form-row{display:flex; gap:5px; justify-content:center;}
+.slot{
+  width:calc(var(--dcard-w) * .82); border:1.5px solid var(--ink); border-radius:7px; overflow:hidden;
+  background:var(--paper); display:flex; flex-direction:column; cursor:pointer; position:relative;
+}
+.slot.sel{box-shadow:0 0 0 3px var(--ok) inset;}
+.slot .srole{font-size:8px; font-weight:900; text-align:center; background:var(--ink); color:var(--paper); line-height:1.5;}
+.slot .sart{height:30px; position:relative;}
+.slot .sart svg{position:absolute; inset:0; width:100%; height:100%;}
+.slot .sname{font-size:7.5px; font-weight:700; text-align:center; padding:2px 1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-top:1px solid var(--ink);}
+.slot .sempty{height:30px; display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--sub);}
+.deck-hint{flex:0 0 auto; font-size:10.5px; font-weight:700; text-align:center; color:var(--sub); min-height:14px;}
+.deck-list{flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; border:1.5px solid var(--ink); border-radius:10px; padding:6px;}
+.deck-grid{display:flex; flex-wrap:wrap; gap:5px; justify-content:center;}
+.deck-grid .card-tile{
+  width:var(--dcard-w); height:var(--dcard-h); font-size:calc(var(--dcard-h) / 17); cursor:pointer;
+}
+.deck-grid .card-tile.placed::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  box-shadow:inset 0 0 0 3px var(--ok); background:rgba(255,255,255,.35);
+}
+.deck-grid .card-tile .placed-tag{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10;
+  background:var(--ok); color:#fff; font-size:9px; font-weight:900; padding:2px 6px; border-radius:5px; border:1.5px solid var(--ink);
+}
+.deck-foot{flex:0 0 auto;}
+
 /* ================= 勝敗 ================= */
 .ovl{position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:70; padding:20px;}
 .ovl-card{background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; padding:22px 26px; text-align:center; box-shadow:6px 6px 0 var(--ink);}
@@ -169,27 +236,36 @@ button:disabled{opacity:0.3; cursor:default;}
 
 <svg id="artDefs" width="0" height="0" style="position:absolute"></svg>
 
-<div id="topbar">
-  <h1>食卓バトル β</h1>
-  <button id="resetBtn" onclick="resetGame()">⟲ リセット</button>
-</div>
+<div class="screen" id="screenHome"></div>
 
-<div class="board">
-  <div class="teamsp" id="enemySP"></div>
-  <div class="row" id="enemyBack"></div>
-  <div class="row" id="enemyFront"></div>
-</div>
+<div class="screen" id="screenDeck"></div>
 
-<div id="centerBar"></div>
+<div class="screen" id="screenBattle">
+  <div id="topbar">
+    <h1>食卓バトル β</h1>
+    <div style="display:flex;gap:5px;">
+      <button id="resetBtn" onclick="startCpuBattle()">⟲ リセット</button>
+      <button id="homeBtn" onclick="showScreen('home')">🏠</button>
+    </div>
+  </div>
 
-<div class="board">
-  <div class="row" id="playerFront"></div>
-  <div class="row" id="playerBack"></div>
-  <div class="teamsp" id="playerSP"></div>
-</div>
+  <div class="board">
+    <div class="teamsp" id="enemySP"></div>
+    <div class="row" id="enemyBack"></div>
+    <div class="row" id="enemyFront"></div>
+  </div>
 
-<div id="bottombar">
-  <button class="end" id="endTurnBtn" onclick="onEndTurn()">ターン終了</button>
+  <div id="centerBar"></div>
+
+  <div class="board">
+    <div class="row" id="playerFront"></div>
+    <div class="row" id="playerBack"></div>
+    <div class="teamsp" id="playerSP"></div>
+  </div>
+
+  <div id="bottombar">
+    <button class="end" id="endTurnBtn" onclick="onEndTurn()">ターン終了</button>
+  </div>
 </div>
 
 <div id="fxLayer"></div>

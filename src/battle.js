@@ -145,9 +145,9 @@ function dealDamage(atkTk, atkCard, defTk, defSlot, base, fx){
   if(fx){
     fx.targetText = '-' + applied;
     fx.targetKind = 'damage';
-    if(aff >= 2) fx.affText = '弱点!';
-    else if(aff === 0) fx.affText = '無効';
-    else if(aff < 1) fx.affText = '半減';
+    if(aff === 0) fx.affText = '無効';
+    else if(aff > 1) fx.affText = '有利';
+    else if(aff < 1) fx.affText = '軽減';
   }
 
   if(defCard.hp <= 0) killCard(defTk, defSlot);

@@ -120,7 +120,7 @@ function playFx(fx){
 
     /* 属性相性(弱点!/半減/無効) */
     if(fx.affText){
-      const cls = fx.affText === '弱点!' ? 'fx-aff weak' : fx.affText === '無効' ? 'fx-aff null' : 'fx-aff resist';
+      const cls = fx.affText === '有利' ? 'fx-aff weak' : fx.affText === '無効' ? 'fx-aff null' : 'fx-aff resist';
       const e = spawn(cls, tc.x, tc.y - tc.r.height / 2 + 6, fx.affText);
       e.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.6) rotate(-8deg)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.1) rotate(-8deg)',offset:.25},{opacity:1,offset:.7},{opacity:0}],{duration:950, easing:'ease-out'});
       drop(e, 970);
