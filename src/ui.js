@@ -28,8 +28,8 @@ function skillDetail(s){
   if(s.pierce) p.push('貫通' + Math.round(s.pierce * 100) + '%');
   if(s.status) p.push(statusLabel(s.status.type) + Math.round(s.status.chance * 100) + '%');
   if(s.critStatus) p.push('会心+');
-  if(s.stun) p.push('スタン');
-  if(s.sealTarget) p.push('封印');
+  if(s.stun) p.push('封印2T');
+  if(s.sealTarget) p.push('封印2T');
   if(s.swapEnemy) p.push('陣形かく乱');
   if(s.drainSP) p.push('敵SP-' + s.drainSP);
   if(s.gainSP) p.push('SP+' + s.gainSP);
@@ -106,21 +106,24 @@ function cardFaceHtml(c, role, ctx){
   }).join('');
 
   const canMove = live && ctx.tk === 'player' && state.turn === 'player' && !state.over
-    && role !== 'king' && c.alive && !state.pendingAction && !state.moveMode
+    && role !== 'king' && c.alive && c.locked !== 'all'
+    && !state.pendingAction && !state.moveMode
     && (teams.player.freeMove || teams.player.sp >= MOVE_COST);
 
   /* 状態は「何が・どれだけ・あと何ターン」まで出す */
   const st = [];
   if(live){
-    if(c.status){
-      const sp = STATUS_SPEC[c.status];
+    const sp = c.status ? STATUS_SPEC[c.status] : null;
+    if(sp){
       /* 何が・どれだけ・あと何ターンかまで出す */
       const eff = sp.dot > 0 ? `-${sp.dot}/T`
-                : sp.lock    ? '行動不可'
+                : sp.lock === 'all'    ? '行動不可'
+                : sp.lock === 'skills' ? '技不可'
                 : `攻${Math.round((sp.atkMod - 1) * 100)}%`;
       st.push(`<span class="st ${c.status}">${sp.label} ${eff}<b>${c.statusTurns}T</b></span>`);
     }
-    if(c.locked) st.push(`<span class="st seal">動けない</span>`);
+    if(c.locked === 'all')    st.push(`<span class="st seal">動けない</span>`);
+    if(c.locked === 'skills') st.push(`<span class="st seal">技が出せない</span>`);
     if(c.atkBuff > 0) st.push(`<span class="st up">攻+${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
     if(c.atkBuff < 0) st.push(`<span class="st down">攻${Math.round(c.atkBuff*100)}%<b>${c.atkBuffTurns}T</b></span>`);
   }

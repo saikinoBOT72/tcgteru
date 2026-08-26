@@ -44,30 +44,30 @@ const RARITY = {
 
 /* ---- 状態異常の価値表 ----------------------------------------
    全ての状態異常を「与ダメージ換算で 14〜16」に揃えてある。
-   共有SP制では『1体の行動を潰す』だけでは他のカードで代替できて
-   しまうため、行動封じ系は SP も 1 奪って初めて 1 アクション分の
-   価値になる。効果は次の3系統だけに整理した:
-
-     ① 継続ダメージ … dot × turns
-        やけど 7×2 = 14 / 毒 4×4 = 16
-     ② 行動封じ     … lock。ターン開始時に「そのカードは今ターン
-        行動不可」+ チームSP-1。1アクション ≒ 16 相当
-        凍結 / スタン / 封印
-     ③ 弱体         … atkMod。そのカードの与ダメージに倍率
-        麻痺 0.55倍 ×2T ≒ 2回分の半減 ≒ 15 相当
-
-   カード側の付与確率は「威力 + 確率 × 実効価値 ≒ 同コストの
+   カード側の付与確率は「威力 + 付与率 × 実効価値 ≒ 同コストの
    単純攻撃 + 少し」になるよう data 側で決めている。
+
+   ── 行動封じの2種類 ──
+   以前は 凍結 / スタン / 封印 が全て同じ {turns:1, lock:true} で、
+   名前が違うだけの完全な重複だった。lock を段階に変えて分けている:
+
+     lock:'all'    … スキルも移動も不可。さらにチームSP-1。
+                     共有SP制では「1体を黙らせる」だけなら他のカードで
+                     代替できてしまうので、SPを奪って初めて
+                     1アクションぶんの損になる。→ 凍結
+     lock:'skills' … スキルは使えないが移動はできる。SPは奪わない。
+                     縛りが緩いぶん2ターン続く。→ 封印
+
+   スタンは凍結と完全に同じだったので廃止し、skill.stun は封印に寄せた。
    ---------------------------------------------------------------- */
 const STATUS_SPEC = {
-  burn    : {label:'やけど', turns:2, dot:7, lock:false, atkMod:1   },
-  poison  : {label:'毒',     turns:4, dot:4, lock:false, atkMod:1   },
-  freeze  : {label:'凍結',   turns:1, dot:0, lock:true,  atkMod:1   },
-  stun    : {label:'スタン', turns:1, dot:0, lock:true,  atkMod:1   },
-  seal    : {label:'封印',   turns:1, dot:0, lock:true,  atkMod:1   },
-  paralyze: {label:'麻痺',   turns:2, dot:0, lock:false, atkMod:.55 }
+  burn    : {label:'やけど', turns:2, dot:7, lock:null,     atkMod:1   },  // 7×2 = 14
+  poison  : {label:'毒',     turns:4, dot:4, lock:null,     atkMod:1   },  // 4×4 = 16
+  freeze  : {label:'凍結',   turns:1, dot:0, lock:'all',    atkMod:1   },  // 1行動 + SP-1 ≒ 16
+  seal    : {label:'封印',   turns:2, dot:0, lock:'skills', atkMod:1   },  // 移動は可 ×2T ≒ 16
+  paralyze: {label:'麻痺',   turns:2, dot:0, lock:null,     atkMod:.55 }   // 与ダメ0.55倍 ×2T ≒ 14
 };
-/* 行動封じが奪うチームSP */
+/* 凍結(lock:'all')だけが奪うチームSP */
 const LOCK_SP_DRAIN = 1;
 
 const STATUS_LABEL = {};
@@ -194,6 +194,46 @@ function shroom(bgId, cap, capLine, spots){
     + A.smile(10, 3)
     + `</g>`;
 }
+
+/* ---- 簡素な仮アート ------------------------------------------
+   R/SR/UR を足すとカードが59枚になるので、1枚ずつ描くのは現実的でない。
+   地色・図形・色・小物を渡すだけで1枚できる関数にしてある。
+   ちゃんとした絵に差し替えるまでの仮画像。
+   -------------------------------------------------------------- */
+const SHAPE = {
+  round: 'M0 -15a15 15 0 1 1 .01 0z',
+  block: 'M-15 -15h30v30h-30z',
+  tall : 'M-10 -19h20v38h-20z',
+  wide : 'M-22 -11h44v22h-44z',
+  spike: 'M0 -20 6 -7 20 -5 10 4 13 19 0 12 -13 19 -10 4 -20 -5 -6 -7z',
+  drop : 'M0 -19q15 13 15 21a15 15 0 0 1-30 0q0-8 15-21z',
+  arch : 'M-16 15v-13a16 16 0 0 1 32 0v13z',
+  gem  : 'M0 -19 17 -6 11 16h-22L-17 -6z',
+  bar  : 'M-23 -6h46v13h-46z',
+  hill : 'M-21 14q0-22 21-22t21 22z'
+};
+/* mark はアートの上に重ねる小物。無ければ省略 */
+function simple(bgId, shape, fill, line, mark, eyeY){
+  return A.bg(bgId) + `<g transform="translate(50 26)">`
+    + `<path d="${SHAPE[shape]}" fill="${fill}" stroke="${line}" stroke-width="2.4" stroke-linejoin="round"/>`
+    + A.eyes(eyeY === undefined ? -2 : eyeY, 4.4, 2.4)
+    + A.smile((eyeY === undefined ? -2 : eyeY) + 7, 3)
+    + (mark || '') + `</g>`;
+}
+/* よく使う小物 */
+const M = {
+  crown : `<path d="M-9 -19-6 -25-1 -20 4 -26 8 -19z" fill="#e8c22c" stroke="#7d6208" stroke-width="1.5" stroke-linejoin="round"/>`,
+  cross : `<g fill="#fff" stroke="#c0392b" stroke-width="1.4"><rect x="-3" y="-12" width="6" height="16" rx="1"/><rect x="-8" y="-7" width="16" height="6" rx="1"/></g>`,
+  star  : `<path d="M0 -26 2.6 -20 9 -19.5 4.2 -15.4 5.7 -9 0 -12.4 -5.7 -9 -4.2 -15.4 -9 -19.5 -2.6 -20z" fill="#ffe14d" stroke="#8a6a10" stroke-width="1.2" stroke-linejoin="round"/>`,
+  fuse  : `<path d="M0 -14q7-5 3-9" fill="none" stroke="#6b5a3a" stroke-width="2" stroke-linecap="round"/>` +
+          `<circle cx="3.6" cy="-23.5" r="2.4" fill="#ffb24d" stroke="#b8501a" stroke-width="1.2"/>`,
+  wing  : `<g fill="none" stroke="#f6f1e4" stroke-width="2.2" stroke-linecap="round" opacity=".9"><path d="M-17 -8-27 -14M17 -8 27 -14M-16 0-28 -2M16 0 28 -2"/></g>`,
+  speed : `<g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85"><path d="M-30 -6h10M-33 1h13M-28 8h9"/></g>`,
+  leaf  : `<path d="M0 -20q-11 4-11 12 8 2 11-4 3 6 11 4 0-8-11-12z" fill="#5aab54" stroke="#2c5c28" stroke-width="1.6"/>`,
+  book  : `<g fill="none" stroke="#f6f1e4" stroke-width="1.8"><path d="M0 -10v22M-11 -10h22"/></g>`,
+  scope : `<g fill="none" stroke="#c0392b" stroke-width="1.6"><circle cx="0" cy="-1" r="7"/><path d="M0 -9v16M-8 -1h16"/></g>`,
+  ball  : `<g fill="none" stroke="#3f5164" stroke-width="1.6"><path d="M-14 -4q14 8 28 0M-9 -13q5 13 0 26M9 -13q-5 13 0 26"/></g>`
+};
 
 const ART = {
 /* ---------------- さいきの族 ---------------- */
@@ -353,11 +393,54 @@ onsen: A.bg('ice') + `<g transform="translate(50 28)">` + A.steam(-14, -18, 1) +
 <path d="M-11 -12q0-9 11-9t11 9q-5 3-11 3t-11-3z" fill="#f4ecd8" stroke="#8a7550" stroke-width="2"/>
 <path d="M-8 -8q8 5 16 0" fill="none" stroke="#cfc3a4" stroke-width="1.8"/>
 <circle cx="-4.4" cy="-15" r="2.1" fill="#1a1a1a"/><circle cx="4.4" cy="-15" r="2.1" fill="#1a1a1a"/>
-<path d="M-3 -10q3 2.4 6 0" fill="none" stroke="#1a1a1a" stroke-width="1.7" stroke-linecap="round"/></g>`
+<path d="M-3 -10q3 2.4 6 0" fill="none" stroke="#1a1a1a" stroke-width="1.7" stroke-linecap="round"/></g>`,
+
+/* ================= R / SR / UR の仮アート =================
+   simple() と shroom() の組み合わせだけで作った差し替え前提の絵。
+   ========================================================== */
+doctor:      simple('none', 'tall',  '#f4f7f8', '#5c6870', M.cross),
+volley:      simple('bolt', 'round', '#f6f1e4', '#3f5164', M.ball),
+lumpF:       simple('fire', 'hill',  '#c9452a', '#6e1f16'),
+lumpI:       simple('ice',  'gem',   '#bfe6f7', '#2f7fae'),
+lumpP:       simple('poison','hill', '#6b8a3a', '#33471a'),
+lumpB:       simple('bolt', 'wide',  '#8e9ab0', '#3f4a5e', A.bolt(0, -20, .8)),
+lumpN:       simple('none', 'hill',  '#c9736a', '#6e3028'),
+killer:      simple('bolt', 'drop',  '#4a4a4a', '#161616', M.speed),
+bomber:      simple('fire', 'round', '#3a3a3a', '#141414', M.fuse),
+dragF:       simple('fire', 'spike', '#e2582f', '#8c2a12'),
+dragI:       simple('ice',  'spike', '#5cb8e0', '#1d5b83'),
+dragP:       simple('poison','spike','#7b40b5', '#42206a'),
+dragB:       simple('bolt', 'spike', '#e8c22c', '#7d6208'),
+dragN:       simple('none', 'spike', '#8e9a94', '#3f4a45', M.crown),
+sennin:      simple('poison','arch',  '#e8dcc0', '#8a7550', M.leaf),
+cheesecake:  simple('ice',  'block', '#f2d99a', '#a8842e'),
+
+srF: shroom('fire',   '#8c2a12', '#3d0f06', M.crown),
+srI: shroom('ice',    '#1d5b83', '#0b2e45', M.crown),
+srP: shroom('poison', '#42206a', '#1d0d33', M.crown),
+srB: shroom('bolt',   '#7d6208', '#3d2f02', M.crown),
+srN: shroom('none',   '#3f4a45', '#191f1c', M.crown),
+
+villager:    simple('none', 'tall',  '#8a6a4a', '#4a3520'),
+bible:       simple('ice',  'block', '#7d2c22', '#43120d', M.book),
+rifle:       simple('none', 'bar',   '#5c6870', '#232b30', M.scope, -14),
+hadou:       simple('bolt', 'wide',  '#3f5164', '#141c26',
+               `<g fill="none" stroke="#8fd6ff" stroke-width="2"><circle cx="0" cy="0" r="6"/><circle cx="0" cy="0" r="10" opacity=".6"/></g>`, -16),
+magician:    simple('poison','arch', '#5b3b8a', '#2b1c45', M.star),
+
+terra:       simple('none', 'tall',  '#7de8b0', '#1f7d52', M.star),
+jetrun:      simple('bolt', 'drop',  '#f2d24a', '#8a6a10', M.speed),
+ipi:         simple('fire', 'round', '#f2a0bd', '#a3465f', M.star),
+tnt:         simple('fire', 'block', '#c0392b', '#6e1f16',
+               `<rect x="-15" y="-5" width="30" height="9" fill="#f6f1e4"/>` + M.fuse, 9),
+neet:        simple('none', 'wide',  '#b8b0a0', '#5a5348',
+               `<g fill="#5a5348" font-family="sans-serif" font-size="7" font-weight="700"><text x="14" y="-13">z</text><text x="20" y="-19">z</text></g>`),
+tepi:        simple('ice',  'round', '#bfe6f7', '#2f7fae', M.star),
+yggdrasil:   simple('poison','arch', '#6b5030', '#33240f', M.leaf)
 };
 
 /* =========================================================
-   カードDB(全26枚 / すべて N)
+   カードDB(全59枚 / N26 R16 SR10 UR7)
    ── 設計方針 ──
    ・レアリティで素の数値は吊り上げない。HPと威力は
      「硬い＝低火力 / 脆い＝高火力」のトレードで散らす
@@ -375,14 +458,14 @@ const CARD_DB = {
              B({name:'熾火の手当て', power:0, friendly:true, heal:16}) ],
     king:{name:'燃え残り', desc:'味方が倒れる毎に攻+10%', trigger:'rage', value:.10}},
 
-  kfire:{name:'ファイアカービィ', elem:'炎', rarity:'N', hp:53,
+  kfire:{name:'ファイアかーび', elem:'炎', rarity:'N', hp:53,
     skills:[ F({name:'ファイアブレス', power:18}),
              F({name:'燃えあがる突進', power:13, status:{type:'burn', chance:.55}}),
              B({name:'あったか応援', power:0, friendly:true, buffAll:{amount:.28, turns:2}}) ],
     king:{name:'消えない火種', desc:'味方が倒れる毎に攻+11%', trigger:'rage', value:.11}},
 
-  gekikara:{name:'激辛ラーメン', elem:'炎', rarity:'N', hp:45,
-    skills:[ F({name:'灼熱すすり', power:16}),
+  gekikara:{name:'激辛ラーメン', elem:'炎', rarity:'N', hp:43,
+    skills:[ F({name:'灼熱すすり', power:14}),
              F({name:'唐辛子の追い打ち', power:13, status:{type:'burn', chance:.5}}),
              B({cost:2, name:'汗だくの気合', power:0, friendly:true, healAll:9}) ],
     king:{name:'辛味の追撃', desc:'状態異常の敵に+5', trigger:'statusBonus', value:5}},
@@ -393,9 +476,9 @@ const CARD_DB = {
              B({name:'装填の合図', power:10, drainSP:1}) ],
     king:{name:'砲身加熱', desc:'SP3以上で与ダメ+18%', trigger:'spMax', need:3, value:.18}},
 
-  creeper:{name:'クリーパー', elem:'炎', rarity:'N', hp:50,
+  creeper:{name:'くりーぱ', elem:'炎', rarity:'N', hp:54,
     skills:[ F({name:'にじり寄り', power:17}),
-             F({cost:2, name:'自爆', power:17, allEnemies:true}),
+             F({cost:2, name:'自爆', power:22, allEnemies:true}),
              B({name:'導火線の音', power:0, debuffAll:{amount:.28, turns:2}}) ],
     king:{name:'置き土産', desc:'味方が倒れる毎に攻+14%', trigger:'rage', value:.14}},
 
@@ -406,13 +489,13 @@ const CARD_DB = {
              B({name:'静かな治癒', power:0, friendly:true, cleanse:true, heal:15}) ],
     king:{name:'凍てつく守り', desc:'前衛2枚生存で被ダメ-12%', trigger:'frontGuard', value:.12}},
 
-  kice:{name:'アイスカービィ', elem:'氷', rarity:'N', hp:52,
+  kice:{name:'アイスかーび', elem:'氷', rarity:'N', hp:52,
     skills:[ F({name:'こおりのいぶき', power:18}),
              F({name:'つめたい抱きつき', power:12, status:{type:'freeze', chance:.5}}),
              B({name:'冷ややかな視線', power:0, debuffAtk:{amount:.38, turns:2}}) ],
     king:{name:'氷の壁', desc:'前衛2枚生存で被ダメ-13%', trigger:'frontGuard', value:.13}},
 
-  onsen:{name:'温泉の神', elem:'氷', rarity:'N', hp:48,
+  onsen:{name:'温泉の神', elem:'氷', rarity:'N', hp:43,
     skills:[ F({name:'湯けむり払い', power:15}),
              B({name:'源泉かけ流し', power:0, friendly:true, healAll:8, cleanse:true}),
              B({cost:2, name:'ぬくもりの祝福', power:0, friendly:true, heal:17}) ],
@@ -437,13 +520,13 @@ const CARD_DB = {
              B({name:'腐食の霧', power:0, debuffAll:{amount:.28, turns:2}}) ],
     king:{name:'蝕み', desc:'状態異常の敵に+4', trigger:'statusBonus', value:4}},
 
-  kpoison:{name:'ポイズンカービィ', elem:'毒', rarity:'N', hp:50,
+  kpoison:{name:'ポイズンかーび', elem:'毒', rarity:'N', hp:50,
     skills:[ F({name:'毒液スピット', power:17}),
              F({name:'とけこむ体液', power:13, status:{type:'poison', chance:.6}}),
              B({name:'解毒とお守り', power:0, friendly:true, cleanse:true, buffTarget:{amount:.15, turns:2}}) ],
     king:{name:'毒の相乗', desc:'味方が状態異常付与で追加5', trigger:'onStatusInflict', value:5}},
 
-  enderman:{name:'エンダーマン', elem:'毒', rarity:'N', hp:46,
+  enderman:{name:'えんだーまん', elem:'毒', rarity:'N', hp:46,
     skills:[ F({name:'目が合った', power:17}),
              F({cost:2, name:'瞬間移動', power:24, swapEnemy:true}),
              B({name:'空間のきしみ', power:10, drainSP:1}) ],
@@ -464,29 +547,29 @@ const CARD_DB = {
   /* ================= 雷 ================= */
   sbolt:{name:'雷のさいきの', elem:'雷', rarity:'N', hp:46,
     skills:[ F({name:'帯電突進', power:16}),
-             B({name:'雷気供給', power:0, friendly:true, gainSP:2, selfDamage:14, oncePerTurn:true}),
+             B({name:'雷気供給', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}),
              F({name:'しびれ放電', power:11, status:{type:'paralyze', chance:.45}}) ],
     king:{name:'高電圧', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
 
-  kspark:{name:'スパークカービィ', elem:'雷', rarity:'N', hp:45,
+  kspark:{name:'スパークかーび', elem:'雷', rarity:'N', hp:45,
     skills:[ F({name:'スパークタックル', power:16}),
              F({name:'痺れる放電', power:11, status:{type:'paralyze', chance:.45}}),
-             B({name:'電力チャージ', power:0, friendly:true, gainSP:2, selfDamage:14, oncePerTurn:true}) ],
+             B({name:'電力チャージ', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}) ],
     king:{name:'感電の連鎖', desc:'味方が状態異常付与で追加5', trigger:'onStatusInflict', value:5}},
 
-  nyancat:{name:'NYANCAT', elem:'雷', rarity:'N', hp:40,
+  nyancat:{name:'にゃんきゃっと', elem:'雷', rarity:'N', hp:40,
     skills:[ F({name:'虹の尾ビンタ', power:16}),
-             B({name:'にゃんこチャージ', power:0, friendly:true, gainSP:2, selfDamage:14, oncePerTurn:true}),
+             B({name:'にゃんこチャージ', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}),
              F({cost:2, name:'レインボーダッシュ', power:23}) ],
     king:{name:'無限ループ', desc:'5枚全員生存で全体+14%', trigger:'fullBoard', value:.14}},
 
-  carkirby:{name:'車カービィ', elem:'雷', rarity:'N', hp:50,
+  carkirby:{name:'車かーび', elem:'雷', rarity:'N', hp:50,
     skills:[ F({name:'体当たり走行', power:18}),
              F({cost:2, name:'フルスロットル', power:30}),
              B({name:'ピットイン', power:0, friendly:true, friendlyFreeMove:true, heal:15}) ],
     king:{name:'アイドリング', desc:'ターン開始時に王HP+4', trigger:'turnHeal', value:4}},
 
-  shadow:{name:'シャドウ', elem:'雷', rarity:'N', hp:44,
+  shadow:{name:'しゃどう', elem:'雷', rarity:'N', hp:42,
     skills:[ F({name:'カオススラッシュ', power:18}),
              F({name:'漆黒のしびれ', power:12, status:{type:'paralyze', chance:.5}}),
              B({name:'エネルギー吸収', power:0, drainSP:1, gainSP:1, selfDamage:9, oncePerTurn:true}) ],
@@ -499,7 +582,7 @@ const CARD_DB = {
              F({cost:2, name:'渾身のぶちかまし', power:28}) ],
     king:{name:'素の力', desc:'ターン毎に攻+6% 最大30%', trigger:'rampUp', value:.06, max:.30}},
 
-  kstone:{name:'ストーンカービィ', elem:'無', rarity:'N', hp:60,
+  kstone:{name:'ストーンかーび', elem:'無', rarity:'N', hp:60,
     skills:[ F({name:'のしかかり', power:17}),
              F({cost:2, name:'ストーンプレス', power:27}),
              B({name:'岩陰で休む', power:0, friendly:true, heal:16}) ],
@@ -511,13 +594,13 @@ const CARD_DB = {
              F({cost:2, name:'ロット崩し', power:27}) ],
     king:{name:'胃もたれ', desc:'後衛2枚生存で毎T 王HP+5', trigger:'backHeal', value:5}},
 
-  waddle:{name:'ワドルディ', elem:'無', rarity:'N', hp:54,
+  waddle:{name:'わどるでぃ', elem:'無', rarity:'N', hp:54,
     skills:[ F({name:'やりで突く', power:17}),
              B({name:'みんなで応援', power:0, friendly:true, buffAll:{amount:.28, turns:2}}),
              F({cost:2, name:'とっしんアタック', power:28}) ],
     king:{name:'いつでも一緒', desc:'5枚全員生存で全体+17%', trigger:'fullBoard', value:.17}},
 
-  shacho:{name:'社長', elem:'無', rarity:'N', hp:60,
+  shacho:{name:'社長', elem:'無', rarity:'N', hp:63,
     skills:[ F({name:'決裁のハンコ', power:17}),
              B({name:'鼓舞する訓示', power:0, friendly:true, buffAll:{amount:.30, turns:2}}),
              B({name:'叱責', power:15, debuffAtk:{amount:.25, turns:2}}) ],
@@ -526,7 +609,214 @@ const CARD_DB = {
   /* スキルが1つしかない異端カード。空いた2枠は空欄で描かれる */
   ishi:{name:'そこら辺の石', elem:'無', rarity:'N', hp:62,
     skills:[ F({name:'ころがる', power:18}) ],
-    king:{name:'ただの石', desc:'前衛2枚生存で被ダメ-15%', trigger:'frontGuard', value:.15}}
+    king:{name:'ただの石', desc:'前衛2枚生存で被ダメ-15%', trigger:'frontGuard', value:.15}},
+
+  /* ================= R =================
+     レアリティで素の数値は上げない。R以上は「尖った戦術」に使える
+     道具を持たせる方向で差を付ける。 */
+  doctor:{name:'医者', elem:'無', rarity:'R', hp:50,
+    skills:[ F({name:'触診', power:15}),
+             B({cost:2, name:'蘇生手術', power:0, friendly:true, revive:{hpPct:.5}, targetDead:true}),
+             B({name:'応急処置', power:0, friendly:true, heal:20, cleanse:true}) ],
+    king:{name:'往診', desc:'ターン開始時に王HP+5', trigger:'turnHeal', value:5}},
+
+  volley:{name:'バレーボール', elem:'雷', rarity:'R', hp:52,
+    skills:[ F({name:'スパイク', power:18}),
+             F({name:'レシーブ', power:10, buffSelf:{amount:.30, turns:2}}),
+             B({name:'トス', power:0, friendly:true, buffTarget:{amount:.25, turns:2}}) ],
+    king:{name:'ラリー', desc:'被弾3回ごとに敵全体へ8反撃', trigger:'counter', need:3, value:8}},
+
+  /* 塊シリーズ5枚。硬くて素直、王スキルは共通で「耐える」 */
+  lumpF:{name:'マグマの塊', elem:'炎', rarity:'R', hp:60,
+    skills:[ F({name:'のしかかり', power:16}),
+             F({name:'溶けだす', power:12, status:{type:'burn', chance:.55}}),
+             B({name:'熱をためる', power:0, friendly:true, buffAll:{amount:.28, turns:2}}) ],
+    king:{name:'塊のねばり', desc:'前衛の致死ダメをHP1で耐える', trigger:'endure'}},
+
+  lumpI:{name:'万年氷の塊', elem:'氷', rarity:'R', hp:58,
+    skills:[ F({name:'のしかかり', power:15}),
+             F({name:'冷気を放つ', power:12, status:{type:'freeze', chance:.5}}),
+             B({name:'凍てつく壁', power:0, debuffAll:{amount:.28, turns:2}}) ],
+    king:{name:'塊のねばり', desc:'前衛の致死ダメをHP1で耐える', trigger:'endure'}},
+
+  lumpP:{name:'ヘドロの塊', elem:'毒', rarity:'R', hp:60,
+    skills:[ F({name:'のしかかり', power:16}),
+             F({name:'溶解', power:13, status:{type:'poison', chance:.55}}),
+             B({name:'悪臭', power:0, debuffAtk:{amount:.38, turns:2}}) ],
+    king:{name:'塊のねばり', desc:'前衛の致死ダメをHP1で耐える', trigger:'endure'}},
+
+  lumpB:{name:'雷雲の塊', elem:'雷', rarity:'R', hp:53,
+    skills:[ F({name:'のしかかり', power:17}),
+             F({name:'帯電', power:11, status:{type:'paralyze', chance:.5}}),
+             B({name:'放電チャージ', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}) ],
+    king:{name:'塊のねばり', desc:'前衛の致死ダメをHP1で耐える', trigger:'endure'}},
+
+  lumpN:{name:'肉の塊', elem:'無', rarity:'R', hp:62,
+    skills:[ F({name:'のしかかり', power:16}),
+             F({cost:2, name:'全力プレス', power:28}),
+             B({name:'栄養補給', power:0, friendly:true, heal:18}) ],
+    king:{name:'塊のねばり', desc:'前衛の致死ダメをHP1で耐える', trigger:'endure'}},
+
+  killer:{name:'キラー', elem:'雷', rarity:'R', hp:56,
+    skills:[ F({name:'突撃', power:18}),
+             F({cost:2, name:'追尾', reach:'any', power:28}),
+             B({name:'照準合わせ', power:0, debuffAtk:{amount:.38, turns:2}}) ],
+    king:{name:'一直線', desc:'SP3以上で与ダメ+18%', trigger:'spMax', need:3, value:.18}},
+
+  bomber:{name:'ボマー', elem:'炎', rarity:'R', hp:53,
+    skills:[ F({name:'導火線', power:17}),
+             F({cost:2, name:'大爆発', power:23, allEnemies:true}),
+             B({name:'爆風', power:0, debuffAll:{amount:.28, turns:2}}) ],
+    king:{name:'誘爆', desc:'味方が倒れる毎に攻+13%', trigger:'rage', value:.13}},
+
+  /* 竜シリーズ5枚。脆いが火力が高く、王スキルは共通で「ターン経過で強化」 */
+  dragF:{name:'炎竜', elem:'炎', rarity:'R', hp:55,
+    skills:[ F({name:'竜の爪', power:18}),
+             F({cost:2, name:'火炎ブレス', power:18, allEnemies:true}),
+             B({name:'咆哮', power:0, friendly:true, buffAll:{amount:.28, turns:2}}) ],
+    king:{name:'竜の威', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
+
+  dragI:{name:'氷竜', elem:'氷', rarity:'R', hp:54,
+    skills:[ F({name:'竜の爪', power:18}),
+             F({cost:2, name:'氷結ブレス', power:20, status:{type:'freeze', chance:.6}}),
+             B({name:'翼で守る', power:0, debuffAll:{amount:.28, turns:2}}) ],
+    king:{name:'竜の威', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
+
+  dragP:{name:'毒竜', elem:'毒', rarity:'R', hp:56,
+    skills:[ F({name:'竜の爪', power:18}),
+             F({cost:2, name:'毒ブレス', power:20, status:{type:'poison', chance:1}}),
+             B({name:'瘴気', power:0, debuffAtk:{amount:.38, turns:2}}) ],
+    king:{name:'竜の威', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
+
+  dragB:{name:'雷竜', elem:'雷', rarity:'R', hp:43,
+    skills:[ F({name:'竜の爪', power:18}),
+             F({cost:2, name:'雷ブレス', power:20, status:{type:'paralyze', chance:.7}}),
+             B({name:'帯電の翼', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}) ],
+    king:{name:'竜の威', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
+
+  dragN:{name:'古竜', elem:'無', rarity:'R', hp:55,
+    skills:[ F({name:'竜の爪', power:17}),
+             F({cost:2, name:'古の一撃', power:29}),
+             B({name:'まどろむ', power:0, friendly:true, heal:20}) ],
+    king:{name:'竜の威', desc:'ターン毎に攻+7% 最大35%', trigger:'rampUp', value:.07, max:.35}},
+
+  sennin:{name:'仙人', elem:'毒', rarity:'R', hp:58,
+    skills:[ F({name:'杖で小突く', power:17}),
+             B({name:'気を練る', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}),
+             B({name:'仙術の風', power:0, friendly:true, buffAll:{amount:.28, turns:2}}) ],
+    king:{name:'悟り', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
+
+  cheesecake:{name:'チーズケーキ', elem:'氷', rarity:'R', hp:57,
+    skills:[ F({name:'ずっしり一切れ', power:16}),
+             B({name:'濃厚な甘み', power:0, friendly:true, heal:22}),
+             B({name:'取り分ける', power:0, friendly:true, healAll:10}) ],
+    king:{name:'しあわせ', desc:'5枚全員生存で全体+16%', trigger:'fullBoard', value:.16}},
+
+  /* ================= SR =================
+     さいきの族の上位5枚は、それぞれ未使用だった機構を1つずつ開ける。 */
+  srF:{name:'煉獄のさいきの', elem:'炎', rarity:'SR', hp:56,
+    skills:[ F({name:'業火', power:18}),
+             F({cost:2, name:'煉獄の炎', power:16, pierce:.25}),
+             B({name:'灰の加護', power:0, friendly:true, heal:18}) ],
+    king:{name:'焼き尽くす', desc:'状態異常の敵に+6', trigger:'statusBonus', value:6}},
+
+  srI:{name:'絶氷のさいきの', elem:'氷', rarity:'SR', hp:54,
+    skills:[ F({name:'氷刃', power:17}),
+             F({cost:2, name:'絶対封鎖', power:12, sealTarget:true}),
+             B({name:'静寂', power:0, debuffAll:{amount:.28, turns:2}}) ],
+    king:{name:'凍てつく理', desc:'被弾3回ごとに敵全体へ8反撃', trigger:'counter', need:3, value:8}},
+
+  srP:{name:'蝕王のさいきの', elem:'毒', rarity:'SR', hp:58,
+    skills:[ F({name:'蝕む爪', power:17}),
+             F({name:'猛毒の胞子', power:11, status:{type:'poison', chance:.5}, critStatus:true}),
+             B({name:'腐敗の霧', power:0, debuffAtk:{amount:.38, turns:2}}) ],
+    king:{name:'蝕みの王', desc:'味方が状態異常付与で追加6', trigger:'onStatusInflict', value:6}},
+
+  srB:{name:'雷轟のさいきの', elem:'雷', rarity:'SR', hp:40,
+    skills:[ F({name:'雷撃', power:17}),
+             F({name:'連雷', power:9, hits:{chance:.45}}),
+             B({name:'雷力供給', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}) ],
+    king:{name:'雷轟', desc:'SP3以上で与ダメ+18%', trigger:'spMax', need:3, value:.18}},
+
+  srN:{name:'終焉のさいきの', elem:'無', rarity:'SR', hp:44,
+    skills:[ F({name:'終わりの一撃', power:17}),
+             F({name:'反転', power:13, reflectStatus:true}),
+             B({cost:2, name:'再誕', power:0, friendly:true, revive:{hpPct:.45}, targetDead:true}) ],
+    king:{name:'終焉', desc:'王だけになると全能力+40%', trigger:'lastStand', value:.40}},
+
+  villager:{name:'村人', elem:'無', rarity:'SR', hp:56,
+    skills:[ F({name:'素手', power:16}),
+             B({name:'取引', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}),
+             B({name:'物々交換', power:0, friendly:true, buffAll:{amount:.28, turns:2}}) ],
+    king:{name:'交易路', desc:'後衛2枚生存で毎T 王HP+6', trigger:'backHeal', value:6}},
+
+  bible:{name:'聖書', elem:'氷', rarity:'SR', hp:57,
+    skills:[ F({name:'分厚い一撃', power:16}),
+             B({cost:2, name:'復活の記述', power:0, friendly:true, revive:{hpPct:.5}, targetDead:true}),
+             B({name:'祝福', power:0, friendly:true, heal:22, cleanse:true}) ],
+    king:{name:'破邪', desc:'毒属性からの被ダメ-35%', trigger:'elemResist', elem:'毒', value:.35}},
+
+  rifle:{name:'ライフル', elem:'無', rarity:'SR', hp:52,
+    skills:[ F({name:'銃床で殴る', power:16}),
+             F({name:'狙撃', reach:'any', power:15}),
+             F({cost:2, name:'貫通弾', reach:'any', power:18, pierce:.2}) ],
+    king:{name:'精密射撃', desc:'SP3以上で与ダメ+18%', trigger:'spMax', need:3, value:.18}},
+
+  hadou:{name:'波動砲', elem:'雷', rarity:'SR', hp:40,
+    skills:[ F({name:'出力を上げる', power:10, buffSelf:{amount:.35, turns:2}}),
+             F({cost:3, name:'波動砲', power:50}),
+             B({name:'チャージ', power:0, friendly:true, cost:2, gainSP:3, selfDamage:8, oncePerTurn:true}) ],
+    king:{name:'臨界', desc:'SP3以上で与ダメ+20%', trigger:'spMax', need:3, value:.20}},
+
+  magician:{name:'マジシャン', elem:'毒', rarity:'SR', hp:60,
+    skills:[ F({name:'杖でひと突き', power:16}),
+             F({cost:2, name:'入れ替えの魔術', power:25, swapEnemy:true}),
+             B({name:'目くらまし', power:0, debuffAll:{amount:.30, turns:2}}) ],
+    king:{name:'手品', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
+
+  /* ================= UR =================
+     数値ではなく「その1枚を軸にデッキを組む」性能で差を付ける。 */
+  terra:{name:'てらぶれーど', elem:'無', rarity:'UR', hp:53,
+    skills:[ F({name:'斬撃', power:17}),
+             F({cost:2, name:'三連斬', power:13, hits:{chance:.5}}),
+             F({cost:3, name:'テラビーム', reach:'any', power:29, pierce:.25}) ],
+    king:{name:'真の刃', desc:'ターン毎に攻+8% 最大40%', trigger:'rampUp', value:.08, max:.40}},
+
+  jetrun:{name:'ジェットラン', elem:'雷', rarity:'UR', hp:42,
+    skills:[ F({name:'高速突進', power:17}),
+             B({name:'ブースト', power:0, friendly:true, friendlyFreeMove:true, gainSP:1, selfDamage:7, oncePerTurn:true}),
+             F({cost:2, name:'音速の一撃', power:28}) ],
+    king:{name:'加速', desc:'ターン毎に攻+8% 最大40%', trigger:'rampUp', value:.08, max:.40}},
+
+  ipi:{name:'いぴ', elem:'炎', rarity:'UR', hp:50,
+    skills:[ F({name:'いぴパンチ', power:16}),
+             B({name:'いぴのおまじない', power:0, friendly:true, healAll:12, cleanse:true}),
+             B({name:'いぴパワー', power:0, friendly:true, buffAll:{amount:.32, turns:2}}) ],
+    king:{name:'いぴの加護', desc:'5枚全員生存で全体+20%', trigger:'fullBoard', value:.20}},
+
+  tnt:{name:'TNT', elem:'炎', rarity:'UR', hp:55,
+    skills:[ F({name:'導火線に火', power:15}),
+             F({cost:2, name:'起爆', reach:'any', power:18, allEnemies:true, selfDamage:12}),
+             B({name:'設置', power:0, debuffAll:{amount:.30, turns:2}}) ],
+    king:{name:'誘爆', desc:'味方が倒れる毎に攻+16%', trigger:'rage', value:.16}},
+
+  neet:{name:'ニート', elem:'無', rarity:'UR', hp:57,
+    skills:[ F({name:'寝返り', power:12}),
+             B({name:'ごろごろする', power:0, friendly:true, heal:20}),
+             F({cost:2, name:'本気を出す', power:29}) ],
+    king:{name:'才能の無駄遣い', desc:'ターン毎に攻+9% 最大45%', trigger:'rampUp', value:.09, max:.45}},
+
+  tepi:{name:'てぴ', elem:'氷', rarity:'UR', hp:51,
+    skills:[ F({name:'てぴアタック', power:17}),
+             F({cost:2, name:'絶対凍結', power:14, status:{type:'freeze', chance:1}}),
+             B({name:'てぴヒール', power:0, friendly:true, heal:20, cleanse:true}) ],
+    king:{name:'氷の理', desc:'味方が状態異常付与で追加6', trigger:'onStatusInflict', value:6}},
+
+  yggdrasil:{name:'ユグドラシル', elem:'毒', rarity:'UR', hp:46,
+    skills:[ F({name:'根を伸ばす', power:15}),
+             B({cost:3, name:'生命の実', power:0, friendly:true, revive:{hpPct:.45}, targetDead:true}),
+             B({name:'世界樹の恵み', power:0, friendly:true, healAll:6, cleanse:true}) ],
+    king:{name:'世界樹', desc:'ターン開始時に王HP+5', trigger:'turnHeal', value:5}}
 };
 
 const CARD_IDS = Object.keys(CARD_DB);

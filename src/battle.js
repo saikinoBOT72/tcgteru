@@ -21,8 +21,8 @@ function createCard(id, lv){
     lv: Math.min(MAX_LV, Math.max(1, lv || 1)),
     skills:t.skills, king:t.king,
     status:null, statusTurns:0, alive:true, usedThisTurn:{},
-    /* locked = 行動封じ系の状態異常で「今ターンは動けない」 */
-    locked:false, lockedBy:'',
+    /* 行動封じ。'all' はスキルも移動も不可、'skills' はスキルだけ不可 */
+    locked:null, lockedBy:'',
     atkBuff:0, atkBuffTurns:0, freeMove:false
   };
 }
@@ -39,17 +39,33 @@ function makeTeam(ids){
   };
 }
 
-/* ---- 後攻補正 ----------------------------------------------
+/* ---- 先攻・後攻の補正 ----------------------------------------
    毎ターンSP+1の共有プール制では、先攻が常に一手先にSPを使える
-   ぶんだけ有利になる(補正なしのミラー400戦で先攻55.8%)。
-   後攻側は初期SPを1持った状態で始めることで、初手のSP差を消す。
+   ぶんだけ有利になる(補正なしのミラー1500戦で先攻55.4%)。
+
+   後攻に初期SPを1渡すのが素直な補正だが、SPは整数なので刻みが粗く、
+   渡すと今度は先攻44.7%まで振れてしまう(SP1手の価値が大きすぎる)。
+   そこで重りを2つに分け、細かい方をHPで持たせている:
+
+     後攻 … 初期SP +1
+     先攻 … 各カードのHP +2
+
+   この組み合わせでミラー2000戦の先攻勝率が50.6%になる。
    ------------------------------------------------------------ */
 const SECOND_PLAYER_SP = 1;
+const FIRST_PLAYER_HP  = 2;
 
 function newBattle(playerIds, enemyIds, first){
   teams = {player:makeTeam(playerIds), enemy:makeTeam(enemyIds)};
   const f = first || 'player';
   teams[foe(f)].sp = SECOND_PLAYER_SP;
+  SLOTS.forEach(k => {
+    const c = teams[f].slots[k];
+    if(!c) return;
+    c.maxHp += FIRST_PLAYER_HP;
+    c.hp    += FIRST_PLAYER_HP;
+    c.shownHp = c.hp;
+  });
   state = {turn:f, over:false, winner:null,
            pendingAction:null, moveMode:false, moveSource:null};
 }
@@ -109,8 +125,10 @@ function attackMult(tk, card){
 function defendMult(tk, target, attacker){
   let m = 1;
 
-  const nul = kingTrig(tk, 'elemNull');
-  if(nul && attacker && attacker.elem === nul.elem) return 0;
+  /* 特定属性への耐性。かつては完全無効だったが、相性差が1.2倍しかない
+     このゲームで1属性だけ0倍にするのは極端すぎたので軽減に変えた */
+  const res = kingTrig(tk, 'elemResist');
+  if(res && attacker && attacker.elem === res.elem) m *= (1 - res.value);
 
   const guard = kingTrig(tk, 'frontGuard');
   if(guard){
@@ -407,7 +425,7 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
     const chance = skill.critStatus ? Math.min(1, skill.status.chance + .25) : skill.status.chance;
     if(Math.random() < chance) inflictStatus(atkTk, tTk, tSlot, skill.status.type, fx);
   }
-  if(skill.stun && target && target.alive) inflictStatus(atkTk, tTk, tSlot, 'stun', fx);
+  if(skill.stun && target && target.alive) inflictStatus(atkTk, tTk, tSlot, 'seal', fx);
   if(skill.sealTarget && target && target.alive) inflictStatus(atkTk, tTk, tSlot, 'seal', fx);
   if(skill.debuffAtk && target && target.alive){
     target.atkBuff = -skill.debuffAtk.amount;
@@ -461,7 +479,7 @@ function startTurn(tk){
     const c = team.slots[k];
     if(!c) return;
     c.usedThisTurn = {};            // 「1ターン1回」制限をリセット
-    c.locked = false; c.lockedBy = '';
+    c.locked = null; c.lockedBy = '';
     if(!c.alive) return;
 
     if(c.atkBuffTurns > 0){
@@ -479,10 +497,15 @@ function startTurn(tk){
                targetKind:'damage', noProjectile:true});
     }
     if(spec.lock){
-      c.locked = true; c.lockedBy = spec.label;
-      team.sp = Math.max(0, team.sp - LOCK_SP_DRAIN);
-      queueFx({target:{team:tk, slot:k}, targetText:spec.label + ' SP-' + LOCK_SP_DRAIN,
-               targetKind:'block', noProjectile:true});
+      c.locked = spec.lock; c.lockedBy = spec.label;
+      if(spec.lock === 'all'){
+        team.sp = Math.max(0, team.sp - LOCK_SP_DRAIN);
+        queueFx({target:{team:tk, slot:k}, targetText:spec.label + ' SP-' + LOCK_SP_DRAIN,
+                 targetKind:'block', noProjectile:true});
+      } else {
+        queueFx({target:{team:tk, slot:k}, targetText:spec.label,
+                 targetKind:'block', noProjectile:true});
+      }
     }
 
     c.statusTurns--;
@@ -609,6 +632,7 @@ function startMoveSource(tk, sk){
   if(state.pendingAction || state.moveMode) return;
   const c = teams.player.slots[sk];
   if(!c || !c.alive || roleOf(sk) === 'king') return;
+  if(c.locked === 'all') return;              // 凍結中は移動もできない
   if(!teams.player.freeMove && teams.player.sp < MOVE_COST) return;
   state.moveMode = true; state.moveSource = sk;
   render();
