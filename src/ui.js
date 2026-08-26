@@ -6,7 +6,7 @@
 function skillDetail(s){
   const p = [];
   p.push('SP' + s.cost);
-  if(s.power > 0) p.push('威' + s.power);
+  if(s.power > 0) p.push((s.allEnemies ? '全体威' : '威') + s.power);
   if(s.heal) p.push('回復' + s.heal);
   if(s.healAll) p.push('全体回復' + s.healAll);
   if(s.revive) p.push('蘇生' + Math.round(s.revive.hpPct * 100) + '%');
@@ -19,11 +19,11 @@ function skillDetail(s){
   if(s.swapEnemy) p.push('陣形かく乱');
   if(s.drainSP) p.push('敵SP-' + s.drainSP);
   if(s.gainSP) p.push('SP+' + s.gainSP);
-  if(s.shield) p.push('盾+' + s.shield);
-  if(s.selfShield) p.push('自盾+' + s.selfShield);
   if(s.cleanse) p.push('治癒');
   if(s.buffSelf) p.push('自攻' + Math.round(s.buffSelf.amount * 100) + '%');
   if(s.buffAll) p.push('全攻' + Math.round(s.buffAll.amount * 100) + '%');
+  if(s.buffTarget) p.push('攻' + Math.round(s.buffTarget.amount * 100) + '%');
+  if(s.debuffAll) p.push('全敵攻-' + Math.round(s.debuffAll.amount * 100) + '%');
   if(s.debuffAtk) p.push('敵攻-' + Math.round(s.debuffAtk.amount * 100) + '%');
   if(s.reflectStatus) p.push('異常返し');
   if(s.friendlyFreeMove) p.push('移動無料');
@@ -73,7 +73,6 @@ function cardFaceHtml(c, role, ctx){
   const st = [];
   if(live){
     if(c.status) st.push(`<span class="st ${c.status}">${statusLabel(c.status)}</span>`);
-    if(c.shield > 0) st.push(`<span class="st">盾${c.shield}</span>`);
     if(c.sealed > 0) st.push(`<span class="st">封印</span>`);
     if(c.stunned > 0) st.push(`<span class="st">スタン</span>`);
     if(c.atkBuff > 0) st.push(`<span class="st up">攻+</span>`);

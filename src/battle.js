@@ -16,7 +16,7 @@ function createCard(id){
   return {
     tplId:id, name:t.name, elem:t.elem, rarity:t.rarity, hp:t.hp, maxHp:t.hp,
     front:t.front, back:t.back, king:t.king,
-    status:null, statusTurns:0, shield:0, alive:true,
+    status:null, statusTurns:0, alive:true,
     atkBuff:0, atkBuffTurns:0, sealed:0, stunned:0, freeMove:false
   };
 }
@@ -123,12 +123,6 @@ function dealDamage(atkTk, atkCard, defTk, defSlot, base, fx){
   if(!defCard || !defCard.alive) return 0;
 
   const {dmg, aff} = computeDamage(atkTk, atkCard, defTk, defCard, base);
-
-  if(dmg > 0 && defCard.shield > 0){
-    defCard.shield--;
-    queueFx({target:{team:defTk, slot:defSlot}, targetText:'GUARD', targetKind:'block', noProjectile:!fx});
-    return 0;
-  }
 
   let applied = dmg;
   // 王スキル「耐える」: 前衛の致死ダメージをHP1で耐える(1体1回)
@@ -288,7 +282,7 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
     if(skill.revive && target && !target.alive){
       target.alive = true;
       target.hp = Math.max(1, Math.round(target.maxHp * skill.revive.hpPct));
-      target.status = null; target.shield = 0;
+      target.status = null;
       teams[tTk].fallenCount = Math.max(0, teams[tTk].fallenCount - 1);
       parts.push('復活!');
     }
@@ -306,7 +300,6 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
       const b2 = target ? target.hp : 0;
       parts.push('全体回復');
     }
-    if(skill.shield && target && target.alive){ target.shield += skill.shield; parts.push('盾+' + skill.shield); }
     if(skill.cleanse && target && target.status){ target.status = null; target.statusTurns = 0; parts.push('治癒'); }
     if(skill.gainSP){ team.sp += skill.gainSP; parts.push('SP+' + skill.gainSP); }
     if(skill.buffAll){
@@ -315,6 +308,11 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
         team.slots[k].atkBuffTurns = skill.buffAll.turns;
       });
       parts.push('攻+' + Math.round(skill.buffAll.amount * 100) + '%');
+    }
+    if(skill.buffTarget && target && target.alive){
+      target.atkBuff = skill.buffTarget.amount;
+      target.atkBuffTurns = skill.buffTarget.turns;
+      parts.push('攻+' + Math.round(skill.buffTarget.amount * 100) + '%');
     }
     if(skill.friendlyFreeMove){ team.freeMove = true; parts.push('移動無料'); }
 
@@ -326,55 +324,77 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
 
   /* ---------- 敵向け ---------- */
   if(skill.buffSelf){ card.atkBuff = skill.buffSelf.amount; card.atkBuffTurns = skill.buffSelf.turns + 1; }
-  if(skill.selfShield){ card.shield += skill.selfShield; }
 
   if(skill.power > 0 && target){
-    const dealt = dealDamage(atkTk, card, tTk, tSlot, skill.power, fx);
-
-    // 確率連撃(外れるまで連鎖)
-    if(skill.hits && dealt > 0){
-      let extra = 0;
-      while(Math.random() < skill.hits.chance && extra < 4 && target.alive){
-        extra++;
-        dealDamage(atkTk, card, tTk, tSlot, skill.power, null);
-        queueFx({target:{team:tTk, slot:tSlot}, targetText:'追撃!', targetKind:'damage', noProjectile:true});
-      }
-      if(extra) fx.comboText = (extra + 1) + 'HIT';
-    }
-
-    // 貫通(後衛/王へ漏れる)
-    if(skill.pierce && roleOf(tSlot) === 'front'){
-      aliveSlots(tTk, k => roleOf(k) !== 'front').forEach(k => {
-        dealDamage(atkTk, card, tTk, k, Math.round(skill.power * skill.pierce), null);
-        queueFx({target:{team:tTk, slot:k}, targetText:'貫通', targetKind:'damage', noProjectile:true});
+    if(skill.allEnemies){
+      /* 全体攻撃: 生存している敵全員に同威力 */
+      aliveSlots(tTk).forEach(k => {
+        const isMain = k === tSlot;
+        dealDamage(atkTk, card, tTk, k, skill.power, isMain ? fx : null);
+        if(!isMain) queueFx({target:{team:tTk, slot:k}, targetText:'-' + skill.power, targetKind:'damage', noProjectile:true});
       });
-    }
+      fx.comboText = '全体';
+    } else {
+      const dealt = dealDamage(atkTk, card, tTk, tSlot, skill.power, fx);
 
-    if(skill.drainSP) teams[tTk].sp = Math.max(0, teams[tTk].sp - skill.drainSP);
-
-    if(skill.status && target.alive){
-      const chance = skill.critStatus ? Math.min(1, skill.status.chance + .25) : skill.status.chance;
-      if(Math.random() < chance) inflictStatus(atkTk, tTk, tSlot, skill.status.type, fx);
-    }
-    if(skill.stun && target.alive){ target.stunned = 1; fx.statusText = 'スタン!'; }
-    if(skill.sealTarget && target.alive){ target.sealed = 2; fx.statusText = '封印!'; }
-    if(skill.debuffAtk && target.alive){
-      target.atkBuff = -skill.debuffAtk.amount;
-      target.atkBuffTurns = skill.debuffAtk.turns;
-      fx.statusText = '攻ダウン';
-    }
-    if(skill.reflectStatus && card.status && target.alive){
-      inflictStatus(atkTk, tTk, tSlot, card.status, fx);
-      card.status = null; card.statusTurns = 0;
-    }
-    if(skill.swapEnemy){
-      const s = teams[tTk].slots;
-      const a = roleOf(tSlot) === 'front' ? tSlot : 'frontL';
-      const b = roleOf(tSlot) === 'front' ? 'backL' : tSlot;
-      if(roleOf(a) !== 'king' && roleOf(b) !== 'king'){
-        const t = s[a]; s[a] = s[b]; s[b] = t;
-        queueFx({swap:[{team:tTk, slot:a}, {team:tTk, slot:b}]});
+      // 確率連撃(外れるまで連鎖)
+      if(skill.hits && dealt > 0){
+        let extra = 0;
+        while(Math.random() < skill.hits.chance && extra < 4 && target.alive){
+          extra++;
+          dealDamage(atkTk, card, tTk, tSlot, skill.power, null);
+          queueFx({target:{team:tTk, slot:tSlot}, targetText:'追撃!', targetKind:'damage', noProjectile:true});
+        }
+        if(extra) fx.comboText = (extra + 1) + 'HIT';
       }
+
+      // 貫通(後衛/王へ漏れる)
+      if(skill.pierce && roleOf(tSlot) === 'front'){
+        aliveSlots(tTk, k => roleOf(k) !== 'front').forEach(k => {
+          dealDamage(atkTk, card, tTk, k, Math.round(skill.power * skill.pierce), null);
+          queueFx({target:{team:tTk, slot:k}, targetText:'貫通', targetKind:'damage', noProjectile:true});
+        });
+      }
+    }
+  }
+
+  /* 威力0の妨害スキルでも下の効果は必ず通す */
+  if(skill.drainSP){
+    teams[tTk].sp = Math.max(0, teams[tTk].sp - skill.drainSP);
+    if(!fx.statusText) fx.statusText = '敵SP-' + skill.drainSP;
+  }
+  if(skill.status && target && target.alive){
+    const chance = skill.critStatus ? Math.min(1, skill.status.chance + .25) : skill.status.chance;
+    if(Math.random() < chance) inflictStatus(atkTk, tTk, tSlot, skill.status.type, fx);
+  }
+  if(skill.stun && target && target.alive){ target.stunned = 1; fx.statusText = 'スタン!'; }
+  if(skill.sealTarget && target && target.alive){ target.sealed = 2; fx.statusText = '封印!'; }
+  if(skill.debuffAtk && target && target.alive){
+    target.atkBuff = -skill.debuffAtk.amount;
+    target.atkBuffTurns = skill.debuffAtk.turns;
+    fx.statusText = '攻ダウン';
+  }
+  if(skill.debuffAll){
+    aliveSlots(tTk).forEach(k => {
+      const c2 = teams[tTk].slots[k];
+      c2.atkBuff = -skill.debuffAll.amount;
+      c2.atkBuffTurns = skill.debuffAll.turns;
+      if(k !== tSlot) queueFx({target:{team:tTk, slot:k}, targetText:'攻ダウン', targetKind:'block', noProjectile:true});
+    });
+    fx.statusText = '全体攻ダウン';
+  }
+  if(skill.reflectStatus && card.status && target && target.alive){
+    inflictStatus(atkTk, tTk, tSlot, card.status, fx);
+    card.status = null; card.statusTurns = 0;
+  }
+  if(skill.gainSP){ team.sp += skill.gainSP; }
+  if(skill.swapEnemy){
+    const s2 = teams[tTk].slots;
+    const a = roleOf(tSlot) === 'front' ? tSlot : 'frontL';
+    const b = roleOf(tSlot) === 'front' ? 'backL' : tSlot;
+    if(roleOf(a) !== 'king' && roleOf(b) !== 'king'){
+      const t2 = s2[a]; s2[a] = s2[b]; s2[b] = t2;
+      queueFx({swap:[{team:tTk, slot:a}, {team:tTk, slot:b}]});
     }
   }
 
@@ -452,17 +472,26 @@ function aiStep(){
   const t = teams.enemy;
   if(t.sp < 1){ backToPlayer(); return; }
 
-  const actable = aliveSlots('enemy', k => roleOf(k) !== 'king' && t.slots[k].sealed <= 0);
-  if(actable.length === 0){ backToPlayer(); return; }
+  /* SP2以上のスキルがあるので、今のSPで実際に撃てる手だけを候補にする */
+  const options = [];
+  aliveSlots('enemy', k => roleOf(k) !== 'king' && t.slots[k].sealed <= 0).forEach(k => {
+    const card = t.slots[k];
+    const cand = roleOf(k) === 'front' ? [card.front[0], card.front[1]] : [card.back];
+    cand.forEach(sk => {
+      if(t.sp < sk.cost) return;
+      if(validTargets('enemy', k, sk).slots.length === 0) return;
+      options.push({slotKey:k, skill:sk});
+    });
+  });
+  if(options.length === 0){ backToPlayer(); return; }
 
-  const slotKey = actable[Math.floor(Math.random() * actable.length)];
+  /* 重撃(SP2以上)はSPに余裕があるときだけ優先的に選ぶ */
+  const heavy = options.filter(o => o.skill.cost >= 2);
+  const pool = (heavy.length && t.sp >= 3 && Math.random() < .6) ? heavy : options;
+  const {slotKey, skill} = pool[Math.floor(Math.random() * pool.length)];
   const c = t.slots[slotKey];
-  const r = roleOf(slotKey);
-  const skill = r === 'front' ? (Math.random() < .4 ? c.front[1] : c.front[0]) : c.back;
-  if(t.sp < skill.cost){ backToPlayer(); return; }
 
   const vt = validTargets('enemy', slotKey, skill);
-  if(vt.slots.length === 0){ setTimeout(aiStep, 350); return; }
 
   // 弱点を突ける相手を優先
   let best = vt.slots[0], bestScore = -1;
