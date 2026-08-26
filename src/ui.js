@@ -33,6 +33,7 @@ function skillDetail(s){
   if(s.swapEnemy) p.push('陣形かく乱');
   if(s.drainSP) p.push('敵SP-' + s.drainSP);
   if(s.gainSP) p.push('SP+' + s.gainSP);
+  if(s.selfDamage) p.push('自傷' + s.selfDamage);
   if(s.cleanse) p.push('治癒');
   if(s.buffSelf) p.push('自攻' + Math.round(s.buffSelf.amount * 100) + '%');
   if(s.buffAll) p.push('全攻' + Math.round(s.buffAll.amount * 100) + '%');
@@ -223,7 +224,6 @@ function ownedCards(){ return CARD_IDS.slice(); }
 let playerDeck = DEFAULT_DECK.slice();
 let cardLevels = {};              // id -> 1..4
 let deckSelSlot = 0;
-let deckDetail = false;           // 一覧をカード現物で見るか
 
 function lvOf(id){ return cardLevels[id] || MAX_LV; }
 
@@ -272,6 +272,12 @@ let currentScreen = 'home';
 
 function showScreen(name){
   currentScreen = name;
+  /* バトルから離れるときは、再生途中の演出を残さず片付ける */
+  if(name !== 'battle'){
+    fxQueue = [];
+    const fl = document.getElementById('fxLayer');
+    if(fl) fl.innerHTML = '';
+  }
   ['Home','Deck','Battle'].forEach(s => {
     document.getElementById('screen' + s).classList.toggle('active', s.toLowerCase() === name);
   });
@@ -288,10 +294,12 @@ function elemDot(e, size){
 }
 
 /* ---- ホーム ---- */
-function miniCardHtml(id){
-  const c = CARD_DB[id];
-  return `<div class="mini"><div class="mart">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}</div>
-    <div class="mname">${c.name}</div><div class="mlv">Lv${lvOf(id)}</div></div>`;
+/* ホームの編成プレビューも、簡略タイルではなく本物のカード面を使う。
+   寸法だけ小さくなるが、カードの構成(枠・アート・4スキル)は完全に同一。 */
+function miniCardHtml(i){
+  const id = playerDeck[i];
+  if(!id) return '<div class="card-tile"></div>';
+  return `<div class="card-tile">${cardFaceHtml(createCard(id, lvOf(id)), roleOf(SLOT_ORDER[i]))}</div>`;
 }
 
 function renderHome(){
@@ -309,8 +317,8 @@ function renderHome(){
     </div>
     <div class="home-deck">
       <span class="home-deck-label">現在の編成</span>
-      <div class="mini-row">${[0,1].map(i => miniCardHtml(playerDeck[i])).join('')}</div>
-      <div class="mini-row">${[2,4,3].map(i => miniCardHtml(playerDeck[i])).join('')}</div>
+      <div class="mini-row">${[0,1].map(miniCardHtml).join('')}</div>
+      <div class="mini-row">${[2,4,3].map(miniCardHtml).join('')}</div>
     </div>`;
 }
 
@@ -320,40 +328,24 @@ function renderHome(){
      ② 下の一覧で「入れるカード」をタップ
    置いたら選択が自動で次の枠へ進むので、上から順にタップし続ける
    だけで5枠が埋まる。既に別の枠にいるカードを選ぶと入れ替わる。
+
+   陣形も一覧も、表示するのはバトルと同じ cardFaceHtml。
+   簡略タイルは使わない。寸法だけ変わり、中身の構成は常に同一。
+   選択中・配置済みといった状態は、カードの外側に重ねる
+   オーバーレイだけで示す(カード本体の見た目は変えない)。
    ------------------------------------------------------------ */
 const DECK_STEP_LABEL = ['前衛 左', '前衛 右', '後衛 左', '後衛 右', '王'];
 
 function slotHtml(i){
   const id = playerDeck[i];
-  const c = CARD_DB[id];
   const sel = deckSelSlot === i ? ' sel' : '';
-  return `<div class="slot${sel}" onclick="selectDeckSlot(${i})">
-    <div class="srole">${DECK_STEP_LABEL[i]}</div>
-    ${c ? `<div class="sart">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}</div>
-           <div class="sname">${c.name}</div><div class="slv">Lv${lvOf(id)}</div>`
-        : `<div class="sempty">未設定</div><div class="sname">—</div><div class="slv">—</div>`}
-    ${sel ? '<span class="sel-flag">ここ</span>' : ''}
-  </div>`;
+  const inner = id
+    ? `<div class="card-tile">${cardFaceHtml(createCard(id, lvOf(id)), roleOf(SLOT_ORDER[i]))}</div>`
+    : `<div class="card-tile empty-slot">未設定</div>`;
+  return `<div class="fslot${sel}" onclick="selectDeckSlot(${i})">${inner}
+    ${sel ? '<span class="sel-flag">ここ</span>' : ''}</div>`;
 }
 
-/* 一覧のコンパクトタイル(既定表示) */
-function pickTileHtml(id){
-  const c = CARD_DB[id];
-  const at = playerDeck.indexOf(id);
-  const rar = RARITY[c.rarity] || RARITY.N;
-  return `<div class="pick${at >= 0 ? ' placed' : ''}" onclick="assignCard('${id}')">
-    <div class="part">${artHtml(id)}${c.beta ? '<span class="mbeta">仮</span>' : ''}
-      ${at >= 0 ? `<span class="pat">${DECK_STEP_LABEL[at]}</span>` : ''}</div>
-    <div class="pname">${c.name}</div>
-    <div class="pfoot">
-      ${elemDot(c.elem, 15)}
-      <span class="prar" style="color:${rar.frame};border-color:${rar.frame}">${c.rarity}</span>
-      <button class="plv" onclick="event.stopPropagation();cycleLv('${id}')">Lv${lvOf(id)}</button>
-    </div>
-  </div>`;
-}
-
-/* 一覧の詳細表示(カード現物。スキル調整の確認用) */
 function pickCardHtml(id){
   const at = playerDeck.indexOf(id);
   const inst = createCard(id, lvOf(id));
@@ -363,20 +355,16 @@ function pickCardHtml(id){
       ${cardFaceHtml(inst, role)}
       ${at >= 0 ? `<span class="placed-tag">${DECK_STEP_LABEL[at]}</span>` : ''}
     </div>
-    <button class="plv wide" onclick="event.stopPropagation();cycleLv('${id}')">Lv${lvOf(id)} ▸</button>
+    <button class="plv" onclick="event.stopPropagation();cycleLv('${id}')">Lv${lvOf(id)} ▸</button>
   </div>`;
 }
 
 function renderDeck(){
-  const list = deckDetail
-    ? `<div class="deck-grid">${ownedCards().map(pickCardHtml).join('')}</div>`
-    : `<div class="pick-grid">${ownedCards().map(pickTileHtml).join('')}</div>`;
-
   document.getElementById('screenDeck').innerHTML = `
     <div class="deck-head">
       <button class="back-btn" onclick="showScreen('home')">← 戻る</button>
       <h2>デッキ編成</h2>
-      <button class="back-btn" onclick="toggleDeckDetail()">${deckDetail ? '一覧で見る' : 'カードで見る'}</button>
+      <span class="deck-count">所持 ${ownedCards().length}枚</span>
     </div>
 
     <div class="step"><b>1</b>変えたい枠をえらぶ</div>
@@ -386,13 +374,12 @@ function renderDeck(){
     </div>
 
     <div class="step"><b>2</b>「${DECK_STEP_LABEL[deckSelSlot]}」に入れるカードをえらぶ</div>
-    <div class="deck-list">${list}</div>
+    <div class="deck-list"><div class="deck-grid">${ownedCards().map(pickCardHtml).join('')}</div></div>
 
     <div class="deck-foot"><button class="end" onclick="startCpuBattle()">この編成でバトル</button></div>`;
 }
 
 function selectDeckSlot(i){ deckSelSlot = i; renderDeck(); }
-function toggleDeckDetail(){ deckDetail = !deckDetail; renderDeck(); }
 
 /* Lvはガチャ実装までの確認用。タップで 1→2→3→4→1 と回す */
 function cycleLv(id){

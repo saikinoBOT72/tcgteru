@@ -357,6 +357,7 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
     fx.targetText = parts.join(' ') || '—';
     fx.targetKind = 'buff';
     queueFx(fx);
+    applySelfDamage(atkTk, slotKey, skill, fx);
     clearSelection(); render(); return;
   }
 
@@ -438,6 +439,7 @@ function executeSkill(atkTk, slotKey, skill, tTk, tSlot){
   }
 
   queueFx(fx);
+  applySelfDamage(atkTk, slotKey, skill, fx);
   clearSelection();
   render();
 }
@@ -505,6 +507,22 @@ function startTurn(tk){
       }
     }
   }
+}
+
+/* ---- 反動ダメージ --------------------------------------------
+   SP回復スキルの代償。共有SP制では「毎ターン +1 SP」は
+   「毎ターン 1アクション増える」とほぼ同義で、単純攻撃1回ぶん
+   (約17ダメージ)よりずっと重い。数値を削るだけでは釣り合わない
+   ので、SPは自分のHPで買わせる。自滅もありうる。
+   ---------------------------------------------------------------- */
+function applySelfDamage(tk, slotKey, skill, fx){
+  if(!skill.selfDamage) return;
+  const c = teams[tk].slots[slotKey];
+  if(!c || !c.alive) return;
+  c.hp = Math.max(0, c.hp - skill.selfDamage);
+  queueFx({target:{team:tk, slot:slotKey}, targetText:'-' + skill.selfDamage,
+           targetKind:'damage', noProjectile:true});
+  if(c.hp <= 0) killCard(tk, slotKey);
 }
 
 function clearSelection(){ state.pendingAction = null; state.moveMode = false; state.moveSource = null; }

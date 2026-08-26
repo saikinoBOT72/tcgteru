@@ -202,14 +202,14 @@ const EFFECTS = {
   reflect:      {label:'自分の状態異常を敵に移す', p:[{k:'power',l:'威力(0可)',v:0}], flag:'reflectStatus'},
   heal:         {label:'味方1体を回復', p:[{k:'heal',l:'回復量',v:14}], friendly:true},
   healAll:      {label:'味方全体を回復', p:[{k:'healAll',l:'回復量',v:10}], friendly:true},
-  gainSP:       {label:'チームSPを回復(1ターン1回)', p:[{k:'gainSP',l:'回復量',v:2}], friendly:true, once:true},
-  buffTarget:   {label:'味方1体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffTarget'},
-  buffAll:      {label:'味方全体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffAll'},
+  gainSP:       {label:'チームSPを回復(1ターン1回・自傷つき)', p:[{k:'gainSP',l:'回復量',v:2},{k:'selfDamage',l:'自傷ダメージ',v:14}], friendly:true, once:true},
+  buffTarget:   {label:'味方1体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:20},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffTarget'},
+  buffAll:      {label:'味方全体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:28},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffAll'},
   cleanse:      {label:'味方1体の状態異常を治療', p:[], friendly:true, flag:'cleanse'},
   revive:       {label:'倒れた味方を蘇生', p:[{k:'hpPct',l:'復活HP %',v:35}], friendly:true, wrap:'revive', dead:true},
   freeMove:     {label:'次の陣形移動を無料化', p:[], friendly:true, flag:'friendlyFreeMove'},
-  debuffAtk:    {label:'敵1体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:20},{k:'turns',l:'持続T',v:2}], wrap:'debuffAtk'},
-  debuffAll:    {label:'敵全体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:20},{k:'turns',l:'持続T',v:2}], wrap:'debuffAll'}
+  debuffAtk:    {label:'敵1体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:38},{k:'turns',l:'持続T',v:2}], wrap:'debuffAtk'},
+  debuffAll:    {label:'敵全体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:28},{k:'turns',l:'持続T',v:2}], wrap:'debuffAll'}
 };
 
 const KING_TRIGGERS = {
@@ -248,7 +248,10 @@ Object.entries(KING_TRIGGERS).forEach(([k,v]) => $('k_trigger').add(new Option(v
 $('statusRef').innerHTML = '<b>状態異常はすべて与ダメ換算 14〜16 に揃えてある</b><br>'
   + Object.values(STATUS_SPEC).map(v => `${v.label} … ${v.note}`).join(' / ')
   + '<br>目安の式:<b>威力 + 付与率 × 実効価値 ≒ 同SPの単純攻撃(SP1で17 / SP2で28)</b>。'
-  + 'スタン・封印は必中なので、SP1に載せるなら威力はほぼ0にする。';
+  + 'スタン・封印は必中なので、SP1に載せるなら威力はほぼ0にする。'
+  + '<br><b>支援系の相場(実測で調整済み)</b>:味方1体回復 16〜22 / 全体回復 8〜11 / '
+  + '全体攻撃力アップ 28% / 敵1体の攻撃力ダウン 38% / 敵全体 28% / SP+2は自傷14とセット。'
+  + '全体バフ・デバフは1アクション使う割に効きが薄く、実測では低めに出るので強めの値にしてある。';
 
 
 /* ---- スキル枠のUI ---- */
@@ -360,6 +363,7 @@ function detail(s, role){
   if(s.healAll) p.push('全体回復'+s.healAll);
   if(s.revive) p.push('蘇生'+Math.round(s.revive.hpPct*100)+'%');
   if(s.status) p.push(STATUS[s.status.type]+Math.round(s.status.chance*100)+'%');
+  if(s.selfDamage) p.push('自傷' + s.selfDamage);
   if(s.stun) p.push('スタン');
   if(s.sealTarget) p.push('封印');
   if(s.swapEnemy) p.push('陣形かく乱');
@@ -407,8 +411,14 @@ function checks(c){
   if(c.list[0] && c.list[0].role !== 'front') w.push('枠1は前衛スキルにする(Lv1ではこの枠しか使えないため)');
   if(c.list.length < 3) w.push('スキルが3つ未満。Lv' + (c.list.length + 1) + '以降に解放するものが無くなる');
   if(fronts.length === 0) w.push('前衛スキルが無いので、前衛枠に置くと何もできない(意図的なら問題なし)');
-  if(c.list.some(e => e.skill.gainSP) && !c.list.some(e => e.skill.gainSP && e.skill.oncePerTurn))
-    w.push('SP回復スキルは oncePerTurn を付けないと同一ターンに撃ち続けられて無限SPになる');
+  c.list.forEach(e => {
+    const s2 = e.skill;
+    if(!s2.gainSP) return;
+    if(!s2.oncePerTurn) w.push(`「${s2.name}」に oncePerTurn が無い。同一ターンに撃ち続けられて無限SPになる`);
+    const net = s2.gainSP - (s2.cost || 1);
+    if(net > 0 && (s2.selfDamage || 0) < 12)
+      w.push(`「${s2.name}」は差引SP+${net}。共有SP制では毎ターン1アクション増えるのと同義で、実測でも突出する。自傷を12以上にして払わせる(現在${s2.selfDamage || 0})`);
+  });
   if(backs.length === 0)  w.push('後衛スキルが無いので、後衛枠に置くと何もできない(意図的なら問題なし)');
   if(c.list.some(e => e.skill.allEnemies)) w.push('全体攻撃はロスター全体で少数に留める設計。現行15枚では2枚だけ');
   fronts.forEach(e => {
@@ -426,7 +436,7 @@ function checks(c){
     if(cost === 1 && s2.power > 20 && !s2.allEnemies)
       w.push(`「${s2.name}」はSP1で威力${s2.power}。現行ロスターのSP1上限は20`);
   });
-  if(c.hp < 40 || c.hp > 62) w.push(`HP ${c.hp} は現行の幅(40〜62)の外`);
+  if(c.hp < 40 || c.hp > 62) w.push(`HP ${c.hp} は現行ロスターの幅(40〜62)の外`);
 
   /* 状態異常つきスキルの期待値が、同コストの単純攻撃から離れすぎていないか */
   c.list.forEach(e => {
