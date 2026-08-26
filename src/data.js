@@ -221,114 +221,118 @@ osechi:`<rect width="100" height="50" fill="url(#bg-none)"/>
 };
 
 /* =========================================================
-   スキル定義ヘルパ(企画書7章のスキルプールに対応)
+   スキル定義ヘルパ
+   ── 前衛/後衛でプールは分かれていない ──
+   同じ効果をどちらの役割にも自由に載せられる。role がその枠を決めるだけ。
+     F(...) = 前衛枠から使うスキル
+     B(...) = 後衛枠から使うスキル
    ========================================================= */
-function mkSkill(o){ return Object.assign({cost:1}, o); }
+function F(o){ return Object.assign({role:'front', cost:1}, o); }
+function B(o){ return Object.assign({role:'back',  cost:1}, o); }
+function mkSkill(o){ return Object.assign({role:'front', cost:1}, o); }
 
 /* =========================================================
    カードDB
-   ── スキル設計モデル ──
-   前衛スキル2枠は必ず次の型に沿う:
-     枠1「通常」 = SP1 の単純攻撃
-     枠2「特殊」 = A型: SP1 の弱い攻撃 + 状態異常
-                 / B型: SP2以上 の強い単純攻撃
-   後衛スキル1枠は原則、SP回復・回復・バフ・デバフ等の支援。
-   全体攻撃は例外として少数のみ許可する。
+   skills は最大3枠。前衛スキルが1つだけ / 後衛が2つ といった変則も可。
+   足りない枠はカード上で空欄になる。
+   ── 設計の目安(強制ではない) ──
+     前衛 = 単純攻撃 / 弱い攻撃+状態異常 / SP2以上の重撃
+     後衛 = SP回復・回復・バフ・デバフなどの支援。全体攻撃は少数のみ
    ※現行15枚はすべてベータ検証用の仮キャラ(名前に「(仮)」)
    ========================================================= */
 const CARD_DB = {
   /* ---------------- N ---------------- */
   karai:{name:'激辛くん(仮)', elem:'炎', rarity:'N', hp:35,
-    front:[ mkSkill({name:'唐辛子パンチ', power:16}),
-            mkSkill({name:'爆速フレイバー', power:10, status:{type:'burn', chance:.25}}) ],
-    back:  mkSkill({name:'仕込みの一味', power:0, friendly:true, buffTarget:{amount:.12, turns:2}}),
+    skills:[ F({name:'唐辛子パンチ', power:16}),
+             F({name:'爆速フレイバー', power:10, status:{type:'burn', chance:.25}}),
+             B({name:'仕込みの一味', power:0, friendly:true, buffTarget:{amount:.12, turns:2}}) ],
     king:{name:'猛暑の意地', desc:'前衛2枚生存で被ダメ-10%', trigger:'frontGuard', value:.1}},
 
   kaki:{name:'かき氷ちゃん(仮)', elem:'氷', rarity:'N', hp:40,
-    front:[ mkSkill({name:'シャリシャリ', power:14}),
-            mkSkill({name:'フリーズタッチ', power:8, status:{type:'freeze', chance:.15}}) ],
-    back:  mkSkill({name:'冷やしなおし', power:0, friendly:true, heal:10}),
+    skills:[ F({name:'シャリシャリ', power:14}),
+             F({name:'フリーズタッチ', power:8, status:{type:'freeze', chance:.15}}),
+             B({name:'冷やしなおし', power:0, friendly:true, heal:10}) ],
     king:{name:'クールダウン', desc:'ターン開始時HP+3', trigger:'turnHeal', value:3}},
 
   natto:{name:'ねばねば納豆(仮)', elem:'毒', rarity:'N', hp:38,
-    front:[ mkSkill({name:'粘着シュート', power:13}),
-            mkSkill({name:'発酵ニードル', power:8, status:{type:'poison', chance:1}}) ],
-    back:  mkSkill({name:'発酵ガス', power:0, status:{type:'poison', chance:.4}}),
+    skills:[ F({name:'粘着シュート', power:13}),
+             F({name:'発酵ニードル', power:8, status:{type:'poison', chance:1}}),
+             B({name:'発酵ガス', power:0, status:{type:'poison', chance:.4}}) ],
     king:{name:'発酵パワー', desc:'状態異常の敵に+3', trigger:'statusBonus', value:3}},
 
   soda:{name:'シュワソーダ(仮)', elem:'雷', rarity:'N', hp:32,
-    front:[ mkSkill({name:'炭酸弾け', power:18}),
-            mkSkill({name:'スパークタッチ', power:10, status:{type:'paralyze', chance:.25}}) ],
-    back:  mkSkill({name:'気泡はじき', power:4, allEnemies:true}),
+    skills:[ F({name:'炭酸弾け', power:18}),
+             F({name:'スパークタッチ', power:10, status:{type:'paralyze', chance:.25}}),
+             B({name:'気泡はじき', power:4, allEnemies:true}) ],
     king:{name:'怒りの泡立ち', desc:'味方が倒れる毎に攻+10%', trigger:'rage', value:.1}},
 
   onigiri:{name:'しろいおにぎり(仮)', elem:'無', rarity:'N', hp:45,
-    front:[ mkSkill({name:'まんまるタックル', power:15}),
-            mkSkill({name:'大盛りタックル', cost:2, power:26}) ],
-    back:  mkSkill({name:'おむすび休憩', power:0, friendly:true, gainSP:2}),
+    skills:[ F({name:'まんまるタックル', power:15}),
+             F({name:'大盛りタックル', cost:2, power:26}),
+             B({name:'おむすび休憩', power:0, friendly:true, gainSP:2}) ],
     king:{name:'安定の白米', desc:'後衛2枚生存で毎T HP+5', trigger:'backHeal', value:5}},
 
   /* ---------------- R ---------------- */
   mapo:{name:'麻婆マスター(仮)', elem:'炎', rarity:'R', hp:42,
-    front:[ mkSkill({name:'花椒バースト', power:20}),
-            mkSkill({name:'灼熱の一撃', cost:2, power:32}) ],
-    back:  mkSkill({name:'痺れの香り', power:0, debuffAtk:{amount:.2, turns:2}}),
+    skills:[ F({name:'花椒バースト', power:20}),
+             F({name:'灼熱の一撃', cost:2, power:32}),
+             B({name:'痺れの香り', power:0, debuffAtk:{amount:.2, turns:2}}) ],
     king:{name:'背水の激辛', desc:'王だけになると全能力+40%', trigger:'lastStand', value:.4}},
 
   icecream:{name:'アイスクリン(仮)', elem:'氷', rarity:'R', hp:44,
-    front:[ mkSkill({name:'コールドスクープ', power:17}),
-            mkSkill({name:'フリーズシロップ', power:9, status:{type:'freeze', chance:.3}}) ],
-    back:  mkSkill({name:'やさしい甘み', power:0, friendly:true, heal:16}),
+    skills:[ F({name:'コールドスクープ', power:17}),
+             F({name:'フリーズシロップ', power:9, status:{type:'freeze', chance:.3}}),
+             B({name:'やさしい甘み', power:0, friendly:true, heal:16}) ],
     king:{name:'ひんやり治癒', desc:'味方の状態異常を自動治療', trigger:'autoCleanse'}},
 
   kinoko:{name:'あやしいキノコ(仮)', elem:'毒', rarity:'R', hp:40,
-    front:[ mkSkill({name:'胞子ばらまき', power:15}),
-            mkSkill({name:'猛毒スティング', power:9, status:{type:'poison', chance:.8}}) ],
-    back:  mkSkill({name:'菌糸のいたずら', power:0, reflectStatus:true, gainSP:1}),
+    skills:[ F({name:'胞子ばらまき', power:15}),
+             F({name:'猛毒スティング', power:9, status:{type:'poison', chance:.8}}),
+             B({name:'菌糸のいたずら', power:0, reflectStatus:true, gainSP:1}) ],
     king:{name:'毒素蓄積', desc:'ターン毎に攻+8% 最大40%', trigger:'rampUp', value:.08, max:.4}},
 
   energy:{name:'エナジー王子(仮)', elem:'雷', rarity:'R', hp:36,
-    front:[ mkSkill({name:'カフェインラッシュ', power:16}),
-            mkSkill({name:'エナジードレイン', power:10, status:{type:'paralyze', chance:.4}}) ],
-    back:  mkSkill({name:'ブースト供給', power:0, friendly:true, gainSP:3}),
+    skills:[ F({name:'カフェインラッシュ', power:16}),
+             F({name:'エナジードレイン', power:10, status:{type:'paralyze', chance:.4}}),
+             B({name:'ブースト供給', power:0, friendly:true, gainSP:3}) ],
     king:{name:'限界突破', desc:'SP3以上で与ダメ+15%', trigger:'spMax', need:3, value:.15}},
 
   shokupan:{name:'食パン侍(仮)', elem:'無', rarity:'R', hp:48,
-    front:[ mkSkill({name:'一刀両断', power:20}),
-            mkSkill({name:'二段斬り', cost:2, power:30}) ],
-    back:  mkSkill({name:'耳まで香ばしく', power:0, friendly:true, cleanse:true, buffTarget:{amount:.15, turns:2}}),
+    skills:[ F({name:'一刀両断', power:20}),
+             F({name:'二段斬り', cost:2, power:30}),
+             B({name:'耳まで香ばしく', power:0, friendly:true, cleanse:true, buffTarget:{amount:.15, turns:2}}) ],
     king:{name:'不屈の耳', desc:'前衛の致死ダメをHP1耐え', trigger:'endure'}},
 
   /* ---------------- SR ---------------- */
   curry:{name:'火山カレー(仮)', elem:'炎', rarity:'SR', hp:52,
-    front:[ mkSkill({name:'噴火プレート', power:22}),
-            mkSkill({name:'溶岩ルー', cost:2, power:36}) ],
-    back:  mkSkill({name:'スパイス鼓舞', power:0, friendly:true, buffAll:{amount:.15, turns:2}}),
+    skills:[ F({name:'噴火プレート', power:22}),
+             F({name:'溶岩ルー', cost:2, power:36}),
+             B({name:'スパイス鼓舞', power:0, friendly:true, buffAll:{amount:.15, turns:2}}) ],
     king:{name:'噴火の怒り', desc:'被弾3回ごとに全体へ8反撃', trigger:'counter', need:3, value:8}},
 
   parfait:{name:'パフェ姫(仮)', elem:'氷', rarity:'SR', hp:50,
-    front:[ mkSkill({name:'クリスタルスプーン', power:19}),
-            mkSkill({name:'甘い誘惑', power:10, sealTarget:true}) ],
-    back:  mkSkill({name:'再生のシロップ', cost:2, power:0, friendly:true, revive:{hpPct:.35}, targetDead:true}),
+    skills:[ F({name:'クリスタルスプーン', power:19}),
+             F({name:'甘い誘惑', power:10, sealTarget:true}),
+             B({name:'再生のシロップ', cost:2, power:0, friendly:true, revive:{hpPct:.35}, targetDead:true}) ],
     king:{name:'満漢のきらめき', desc:'5枚全員生存で全体+20%', trigger:'fullBoard', value:.2}},
 
   ramune:{name:'雷神ラムネ(仮)', elem:'雷', rarity:'SR', hp:46,
-    front:[ mkSkill({name:'ビー玉スマッシュ', power:21}),
-            mkSkill({name:'雷鳴の一撃', cost:2, power:34}) ],
-    back:  mkSkill({name:'炭酸ブースト', power:6, allEnemies:true, drainSP:1}),
+    skills:[ F({name:'ビー玉スマッシュ', power:21}),
+             F({name:'雷鳴の一撃', cost:2, power:34}),
+             B({name:'炭酸ブースト', power:6, allEnemies:true, drainSP:1}) ],
     king:{name:'雷鳴の伝播', desc:'味方が状態異常付与で追加6', trigger:'onStatusInflict', value:6}},
 
   /* ---------------- UR ---------------- */
+  /* ドリアン卿は「前衛スキルを1つしか持たない異端」の実例。3枠目は空欄になる */
   durian:{name:'ドリアン卿(仮)', elem:'毒', rarity:'UR', hp:58,
-    front:[ mkSkill({name:'棘の王笏', power:24}),
-            mkSkill({name:'絶対発酵', cost:3, power:48}) ],
-    back:  mkSkill({name:'瘴気の帳', power:0, debuffAll:{amount:.2, turns:2}}),
+    skills:[ F({name:'棘の王笏', power:26}),
+             B({name:'瘴気の帳', power:0, debuffAll:{amount:.2, turns:2}}) ],
     king:{name:'異臭結界', desc:'氷属性からの被ダメを無効', trigger:'elemNull', elem:'氷'}},
 
   osechi:{name:'おせち重(仮)', elem:'無', rarity:'UR', hp:62,
-    front:[ mkSkill({name:'祝いの大盤振舞', power:22}),
-            mkSkill({name:'重箱返し', cost:2, power:34, swapEnemy:true}) ],
-    back:  mkSkill({name:'一年の計', cost:2, power:0, friendly:true, healAll:12, cleanse:true}),
+    skills:[ F({name:'祝いの大盤振舞', power:22}),
+             F({name:'重箱返し', cost:2, power:34, swapEnemy:true}),
+             B({name:'一年の計', cost:2, power:0, friendly:true, healAll:12, cleanse:true}) ],
     king:{name:'五段重ねの祝', desc:'5枚全員生存で全体+25%', trigger:'fullBoard', value:.25}}
 };
 

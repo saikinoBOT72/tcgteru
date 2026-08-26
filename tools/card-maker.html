@@ -13,58 +13,47 @@
   --accent:#1B6B48; --accent-soft:#E3F0E9; --warn:#A8531B;
 }
 *{box-sizing:border-box;}
-body{
-  margin:0; background:var(--ground); color:var(--ink);
-  font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif; font-size:14px; line-height:1.6;
-}
-.wrap{max-width:1120px; margin:0 auto; padding:22px 16px 60px;}
-header{border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:20px;}
+body{margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif; font-size:14px; line-height:1.6;}
+.wrap{max-width:1140px; margin:0 auto; padding:22px 16px 60px;}
+header{border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:18px;}
 h1{font-family:"Zen Maru Gothic",sans-serif; font-size:24px; margin:0;}
 header p{margin:5px 0 0; color:var(--muted); font-size:12.5px;}
+code{font-family:"JetBrains Mono",monospace; font-size:.92em;}
 
 .cols{display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;}
-@media(max-width:820px){ .cols{grid-template-columns:1fr;} }
+@media(max-width:860px){ .cols{grid-template-columns:1fr;} }
 
 fieldset{border:1px solid var(--line); border-radius:9px; padding:12px 14px 14px; margin:0 0 12px; background:var(--surface);}
-legend{
-  font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:13px; padding:0 7px;
-  color:var(--accent);
-}
+legend{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:13px; padding:0 7px; color:var(--accent);}
 .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px;}
-label{display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:3px; letter-spacing:.02em;}
-input,select{
-  width:100%; font-family:inherit; font-size:13.5px; padding:6px 8px;
-  border:1.5px solid var(--line2); border-radius:6px; background:var(--surface); color:var(--ink);
-}
+label{display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:3px;}
+input,select{width:100%; font-family:inherit; font-size:13.5px; padding:6px 8px;
+  border:1.5px solid var(--line2); border-radius:6px; background:var(--surface); color:var(--ink);}
 input:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
-.row{display:flex; gap:9px; align-items:flex-end;}
-.row>*{flex:1;}
+.row{display:flex; gap:9px; align-items:flex-end; flex-wrap:wrap;}
+.row>*{flex:1; min-width:110px;}
 .hint{font-size:11px; color:var(--muted); margin:6px 0 0;}
-.hint b{color:var(--ink);}
 
-.seg{display:flex; gap:0; border:1.5px solid var(--line2); border-radius:7px; overflow:hidden;}
-.seg button{
-  flex:1; border:none; background:var(--surface); color:var(--muted); font-family:inherit;
-  font-size:12px; font-weight:700; padding:7px 4px; cursor:pointer; border-right:1px solid var(--line);
-}
+.model{background:var(--accent-soft); border:1px solid var(--accent); border-radius:7px;
+  padding:8px 10px; font-size:11.5px; margin-bottom:11px; line-height:1.65;}
+
+.slot{border:1px solid var(--line2); border-radius:8px; padding:10px 11px; margin-bottom:9px; background:var(--surface2);}
+.slot.off{opacity:.5;}
+.slot-head{display:flex; align-items:center; gap:9px; margin-bottom:8px;}
+.slot-head .n{font-family:"JetBrains Mono",monospace; font-weight:600; font-size:12px; color:var(--accent);
+  background:var(--accent-soft); padding:2px 7px; border-radius:3px;}
+.seg{display:flex; border:1.5px solid var(--line2); border-radius:6px; overflow:hidden; flex:0 0 auto;}
+.seg button{border:none; background:var(--surface); color:var(--muted); font-family:inherit;
+  font-size:11.5px; font-weight:700; padding:5px 11px; cursor:pointer; border-right:1px solid var(--line);}
 .seg button:last-child{border-right:none;}
 .seg button.on{background:var(--accent); color:#fff;}
 
-.model{
-  background:var(--accent-soft); border:1px solid var(--accent); border-radius:7px;
-  padding:8px 10px; font-size:11.5px; color:var(--ink); margin-bottom:11px; line-height:1.65;
-}
-.model b{font-weight:700;}
-
-/* preview card — ゲーム本体と同じ見た目 */
 .side{position:sticky; top:16px;}
-.prev-label{font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px; letter-spacing:.04em;}
-.card-tile{
-  width:190px; height:266px; font-size:15.6px; margin:0 auto;
-  position:relative; display:flex; flex-direction:column; overflow:hidden;
-  background:#fff; color:#000; border:1.5px solid #000; border-radius:.6em;
-  box-shadow:0 1px 0 rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.06);
-}
+.prev-label{font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;}
+.card-tile{width:190px; height:266px; font-size:15.6px; margin:0 auto; position:relative;
+  display:flex; flex-direction:column; overflow:hidden; background:#fff; color:#000;
+  border:1.5px solid #000; border-radius:.6em; box-shadow:0 1px 0 rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.06);}
 .c-accent{flex:0 0 auto; height:.28em;}
 .c-head{flex:0 0 auto; height:1.95em; display:flex; align-items:center; gap:.25em; padding:0 .3em; border-bottom:1px solid #000;}
 .c-elem{width:1.5em; height:1.5em; border-radius:50%; border:1px solid #000; display:flex; align-items:center; justify-content:center; font-size:.95em; flex:0 0 auto; box-shadow:inset 0 -.15em .2em rgba(0,0,0,.18);}
@@ -82,30 +71,23 @@ input:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px; bo
 .sk{height:1.72em; display:flex; align-items:center; gap:.25em; padding:0 .28em; border-bottom:1px solid rgba(0,0,0,.28);}
 .sk:last-child{border-bottom:none;}
 .sk.king{background:#efefef;}
+.sk.empty{background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,.05) 4px,rgba(0,0,0,.05) 8px);}
 .sk-tag{flex:0 0 auto; width:1.25em; height:1.25em; border-radius:.18em; border:1px solid #000; font-size:.6em; font-weight:900; display:flex; align-items:center; justify-content:center; line-height:1;}
 .sk-body{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center;}
 .sk-name{font-size:.92em; font-weight:700; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .sk-detail{font-size:.73em; line-height:1.05; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
 .warns{margin-top:10px; display:flex; flex-direction:column; gap:5px;}
-.warn{
-  font-size:11px; color:var(--warn); border:1px solid var(--warn); border-radius:5px;
-  padding:4px 7px; background:#fff;
-}
+.warn{font-size:11px; color:var(--warn); border:1px solid var(--warn); border-radius:5px; padding:4px 7px; background:#fff;}
 .ok{font-size:11px; color:var(--accent); border:1px solid var(--accent); border-radius:5px; padding:4px 7px; background:var(--accent-soft);}
 
 .out{margin-top:16px;}
-pre{
-  background:#131E1A; color:#D7E6DE; font-family:"JetBrains Mono",monospace; font-size:11.5px;
-  padding:12px 14px; border-radius:8px; overflow-x:auto; margin:0; line-height:1.55;
-}
+pre{background:#131E1A; color:#D7E6DE; font-family:"JetBrains Mono",monospace; font-size:11.5px;
+  padding:12px 14px; border-radius:8px; overflow-x:auto; margin:0; line-height:1.55;}
 .btns{display:flex; gap:8px; margin-top:9px; flex-wrap:wrap;}
-button.act{
-  font-family:inherit; font-size:13px; font-weight:700; padding:8px 14px; cursor:pointer;
-  border:1.5px solid var(--ink); border-radius:7px; background:var(--surface); color:var(--ink);
-}
+button.act{font-family:inherit; font-size:13px; font-weight:700; padding:8px 14px; cursor:pointer;
+  border:1.5px solid var(--ink); border-radius:7px; background:var(--surface); color:var(--ink);}
 button.act.primary{background:var(--ink); color:var(--ground);}
-button.act:active{transform:translateY(1px);}
 .copied{font-size:11.5px; color:var(--accent); font-weight:700; align-self:center;}
 </style>
 </head>
@@ -122,8 +104,8 @@ button.act:active{transform:translateY(1px);}
 <fieldset>
   <legend>基本</legend>
   <div class="grid">
-    <div><label>ID(半角英数)</label><input id="f_id" value="newcard" placeholder="tamago"></div>
-    <div><label>名前</label><input id="f_name" value="たまごやき" placeholder="たまごやき"></div>
+    <div><label>ID(半角英数)</label><input id="f_id" value="tamago"></div>
+    <div><label>名前</label><input id="f_name" value="たまごやき"></div>
     <div><label>属性</label><select id="f_elem"></select></div>
     <div><label>レアリティ</label><select id="f_rarity"></select></div>
     <div><label>HP</label><input id="f_hp" type="number" value="40" min="1"></div>
@@ -132,55 +114,23 @@ button.act:active{transform:translateY(1px);}
 </fieldset>
 
 <fieldset>
-  <legend>前衛スキル①(通常攻撃)</legend>
-  <div class="model">SP1の<b>単純攻撃</b>。相手の前衛を殴り、前衛が全滅していれば後衛・王も狙えるようになる。全カード共通の基本形。</div>
-  <div class="row">
-    <div><label>技名</label><input id="f0_name" value="だし巻きアタック"></div>
-    <div style="flex:0 0 90px"><label>威力</label><input id="f0_power" type="number" value="16" min="0"></div>
-  </div>
-</fieldset>
-
-<fieldset>
-  <legend>前衛スキル②(特殊)</legend>
+  <legend>スキル(最大3枠・王スキル除く)</legend>
   <div class="model">
-    <b>A型 — 状態異常</b>:SP1で威力を落とし、代わりに状態異常を付ける。<br>
-    <b>B型 — 重撃</b>:SP2以上を払って威力の高い単純攻撃を撃つ。
+    <b>前衛/後衛でスキルプールは共通</b>。どの効果もどちらの役割にも載せられる。<br>
+    枠を「なし」にすればスキルは減らせる(前衛スキル1つだけ、といった変則カードも作れる)。空いた枠はカード上で空欄になる。<br>
+    <b>役割</b>は「そのカードがどの枠に置かれている時に使えるか」。前衛スキルは相手の前衛を殴り、前衛が倒れて空いた穴の奥にいる味方も狙える。後衛スキルは常に誰にでも届く。
   </div>
-  <div class="seg" id="f1_type" style="margin-bottom:9px">
-    <button data-v="A" class="on">A型 状態異常</button>
-    <button data-v="B">B型 重撃</button>
-  </div>
-  <div class="row">
-    <div><label>技名</label><input id="f1_name" value="あまから包み"></div>
-    <div style="flex:0 0 90px"><label>威力</label><input id="f1_power" type="number" value="9" min="0"></div>
-  </div>
-  <div class="row" id="f1_a" style="margin-top:9px">
-    <div><label>状態異常</label><select id="f1_status"></select></div>
-    <div><label>付与率 %</label><input id="f1_chance" type="number" value="40" min="0" max="100"></div>
-  </div>
-  <div class="row" id="f1_b" style="margin-top:9px; display:none">
-    <div><label>SP消費</label><select id="f1_cost"><option>2</option><option>3</option></select></div>
-  </div>
-</fieldset>
-
-<fieldset>
-  <legend>後衛スキル</legend>
-  <div class="model">原則<b>支援</b>(SP回復・回復・バフ・デバフ・治療・蘇生)。<b>全体攻撃</b>も選べるが、ロスター全体で少数に留めること。</div>
-  <div class="row">
-    <div><label>技名</label><input id="b_name" value="やさしい出汁"></div>
-    <div style="flex:0 0 90px"><label>SP消費</label><select id="b_cost"><option>1</option><option>2</option></select></div>
-  </div>
-  <div style="margin-top:9px"><label>効果の種類</label><select id="b_kind"></select></div>
-  <div class="row" id="b_params" style="margin-top:9px"></div>
+  <div id="slots"></div>
+  <p class="hint">目安:前衛は単純攻撃 / 弱い攻撃+状態異常 / SP2以上の重撃。後衛はSP回復や支援。全体攻撃はロスター全体で少数に。</p>
 </fieldset>
 
 <fieldset>
   <legend>王スキル(自動発動)</legend>
-  <div class="model">プレイヤーが操作しないトリガー型。場にいるだけで効き続ける。</div>
+  <div class="model">プレイヤーが操作しないトリガー型。場にいるだけで効き続ける。王枠に置いた時だけ働く。</div>
   <div class="row">
     <div><label>技名</label><input id="k_name" value="だし巻きの心得"></div>
+    <div><label>トリガー</label><select id="k_trigger"></select></div>
   </div>
-  <div style="margin-top:9px"><label>トリガー</label><select id="k_trigger"></select></div>
   <div class="row" id="k_params" style="margin-top:9px"></div>
   <p class="hint" id="k_desc_hint"></p>
 </fieldset>
@@ -202,241 +152,260 @@ button.act:active{transform:translateY(1px);}
     <button class="act" onclick="randomize()">ランダムで埋める</button>
     <span class="copied" id="copied"></span>
   </div>
-  <p class="hint">貼り付け先は <b>src/data.js の CARD_DB</b>。あわせて <b>ART に同じIDの絵</b>を足すと、ゲームとデッキ編成の両方に出てくる。絵を足さないうちは枠だけ表示される。</p>
+  <p class="hint">貼り付け先は <b>src/data.js の CARD_DB</b>。あわせて <b>ART に同じIDの絵</b>を足すと、ゲームとデッキ編成の両方に出てくる。</p>
 </div>
 </div>
 
 <script>
-const ELEM = {
-  '炎':{icon:'🔥', accent:'#e2483f'},
-  '氷':{icon:'❄️', accent:'#4f96c2'},
-  '毒':{icon:'☠️', accent:'#8e5cc9'},
-  '雷':{icon:'⚡', accent:'#c9a227'},
-  '無':{icon:'⚪', accent:'#8d8d8d'}
-};
+const ELEM = {'炎':{icon:'🔥',accent:'#e2483f'},'氷':{icon:'❄️',accent:'#4f96c2'},
+  '毒':{icon:'☠️',accent:'#8e5cc9'},'雷':{icon:'⚡',accent:'#c9a227'},'無':{icon:'⚪',accent:'#8d8d8d'}};
 const RARITY = {N:'#8d8d8d', R:'#3f7fc2', SR:'#c9a227', UR:'#9b3fc2'};
 const STATUS = {burn:'やけど', poison:'毒', freeze:'凍結', paralyze:'麻痺'};
 
-/* 後衛スキルの選択肢 — 支援中心 */
-const BACK_KINDS = {
-  gainSP:      {label:'チームSPを回復', params:[{k:'gainSP', label:'SP回復量', v:2}], friendly:true},
-  heal:        {label:'味方1体を回復',  params:[{k:'heal', label:'回復量', v:14}], friendly:true},
-  healAll:     {label:'味方全体を回復', params:[{k:'healAll', label:'回復量', v:10}], friendly:true},
-  buffTarget:  {label:'味方1体の攻撃力アップ', params:[{k:'amount', label:'上昇率 %', v:15},{k:'turns', label:'持続T', v:2}], friendly:true, wrap:'buffTarget'},
-  buffAll:     {label:'味方全体の攻撃力アップ', params:[{k:'amount', label:'上昇率 %', v:15},{k:'turns', label:'持続T', v:2}], friendly:true, wrap:'buffAll'},
-  cleanse:     {label:'味方1体の状態異常を治療', params:[], friendly:true, flag:'cleanse'},
-  revive:      {label:'倒れた味方を蘇生', params:[{k:'hpPct', label:'復活HP %', v:35}], friendly:true, wrap:'revive', dead:true},
-  freeMove:    {label:'次の陣形移動を無料化', params:[], friendly:true, flag:'friendlyFreeMove'},
-  debuffAtk:   {label:'敵1体の攻撃力ダウン', params:[{k:'amount', label:'低下率 %', v:20},{k:'turns', label:'持続T', v:2}], wrap:'debuffAtk'},
-  debuffAll:   {label:'敵全体の攻撃力ダウン', params:[{k:'amount', label:'低下率 %', v:20},{k:'turns', label:'持続T', v:2}], wrap:'debuffAll'},
-  drainSP:     {label:'敵チームのSPを削る', params:[{k:'drainSP', label:'削る量', v:1}]},
-  statusOnly:  {label:'敵1体に状態異常だけ付与', params:[{k:'chance', label:'付与率 %', v:40}], status:true},
-  allEnemies:  {label:'敵全体に攻撃(少数のみ)', params:[{k:'power', label:'威力', v:5}], all:true}
+/* 前衛/後衛で共通の効果プール。role とは独立に選べる */
+const EFFECTS = {
+  attack:       {label:'単純攻撃', p:[{k:'power',l:'威力',v:16}]},
+  attackStatus: {label:'攻撃 + 状態異常', p:[{k:'power',l:'威力',v:10},{k:'chance',l:'付与率 %',v:30}], status:true},
+  allEnemies:   {label:'敵全体に攻撃', p:[{k:'power',l:'威力',v:5}], all:true},
+  statusOnly:   {label:'状態異常だけ付与(ダメージなし)', p:[{k:'chance',l:'付与率 %',v:40}], status:true},
+  stun:         {label:'攻撃 + スタン', p:[{k:'power',l:'威力',v:9}], flag:'stun'},
+  seal:         {label:'攻撃 + スキル封印', p:[{k:'power',l:'威力',v:10}], flag:'sealTarget'},
+  swap:         {label:'攻撃 + 陣形かく乱', p:[{k:'power',l:'威力',v:12}], flag:'swapEnemy'},
+  drainSP:      {label:'敵チームのSPを削る', p:[{k:'power',l:'威力(0可)',v:0},{k:'drainSP',l:'削る量',v:1}]},
+  reflect:      {label:'自分の状態異常を敵に移す', p:[{k:'power',l:'威力(0可)',v:0}], flag:'reflectStatus'},
+  heal:         {label:'味方1体を回復', p:[{k:'heal',l:'回復量',v:14}], friendly:true},
+  healAll:      {label:'味方全体を回復', p:[{k:'healAll',l:'回復量',v:10}], friendly:true},
+  gainSP:       {label:'チームSPを回復', p:[{k:'gainSP',l:'回復量',v:2}], friendly:true},
+  buffTarget:   {label:'味方1体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffTarget'},
+  buffAll:      {label:'味方全体の攻撃力アップ', p:[{k:'amount',l:'上昇率 %',v:15},{k:'turns',l:'持続T',v:2}], friendly:true, wrap:'buffAll'},
+  cleanse:      {label:'味方1体の状態異常を治療', p:[], friendly:true, flag:'cleanse'},
+  revive:       {label:'倒れた味方を蘇生', p:[{k:'hpPct',l:'復活HP %',v:35}], friendly:true, wrap:'revive', dead:true},
+  freeMove:     {label:'次の陣形移動を無料化', p:[], friendly:true, flag:'friendlyFreeMove'},
+  debuffAtk:    {label:'敵1体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:20},{k:'turns',l:'持続T',v:2}], wrap:'debuffAtk'},
+  debuffAll:    {label:'敵全体の攻撃力ダウン', p:[{k:'amount',l:'低下率 %',v:20},{k:'turns',l:'持続T',v:2}], wrap:'debuffAll'}
 };
 
-/* 王スキルのトリガー */
 const KING_TRIGGERS = {
-  frontGuard:      {label:'前衛2枚生存で被ダメ軽減', params:[{k:'value', label:'軽減率 %', v:10}], desc:v=>`前衛2枚生存で被ダメ-${v.value}%`},
-  turnHeal:        {label:'ターン開始時に王が回復',   params:[{k:'value', label:'回復量', v:3}],   desc:v=>`ターン開始時HP+${v.value}`},
-  backHeal:        {label:'後衛2枚生存で王が毎T回復', params:[{k:'value', label:'回復量', v:5}],   desc:v=>`後衛2枚生存で毎T HP+${v.value}`},
-  statusBonus:     {label:'状態異常の敵に追加ダメ',   params:[{k:'value', label:'追加ダメ', v:3}], desc:v=>`状態異常の敵に+${v.value}`},
-  rage:            {label:'味方が倒れる毎に攻撃力up', params:[{k:'value', label:'上昇率 %', v:10}], desc:v=>`味方が倒れる毎に攻+${v.value}%`},
-  rampUp:          {label:'ターン経過で徐々に強化',   params:[{k:'value', label:'毎T上昇 %', v:8},{k:'max', label:'上限 %', v:40}], desc:v=>`ターン毎に攻+${v.value}% 最大${v.max}%`},
-  spMax:           {label:'SPが一定以上で与ダメup',   params:[{k:'need', label:'必要SP', v:3},{k:'value', label:'上昇率 %', v:15}], desc:v=>`SP${v.need}以上で与ダメ+${v.value}%`},
-  fullBoard:       {label:'5枚全員生存で全体強化',    params:[{k:'value', label:'強化率 %', v:20}], desc:v=>`5枚全員生存で全体+${v.value}%`},
-  lastStand:       {label:'王だけになると背水強化',   params:[{k:'value', label:'強化率 %', v:40}], desc:v=>`王だけになると全能力+${v.value}%`},
-  counter:         {label:'一定回数被弾で反撃',       params:[{k:'need', label:'必要被弾数', v:3},{k:'value', label:'反撃ダメ', v:8}], desc:v=>`被弾${v.need}回ごとに全体へ${v.value}反撃`},
-  autoCleanse:     {label:'味方の状態異常を自動治療', params:[], desc:()=>'味方の状態異常を自動治療'},
-  endure:          {label:'前衛の致死ダメをHP1で耐え', params:[], desc:()=>'前衛の致死ダメをHP1耐え'},
-  onStatusInflict: {label:'味方が状態異常付与で追撃', params:[{k:'value', label:'追加ダメ', v:6}], desc:v=>`味方が状態異常付与で追加${v.value}`},
-  elemNull:        {label:'特定属性の被ダメを無効',   params:[{k:'elem', label:'無効にする属性', v:'氷', sel:'elem'}], desc:v=>`${v.elem}属性からの被ダメを無効`}
+  frontGuard:      {label:'前衛2枚生存で被ダメ軽減', p:[{k:'value',l:'軽減率 %',v:10,pct:1}], desc:v=>`前衛2枚生存で被ダメ-${v.value}%`},
+  turnHeal:        {label:'ターン開始時に王が回復',   p:[{k:'value',l:'回復量',v:3}],   desc:v=>`ターン開始時HP+${v.value}`},
+  backHeal:        {label:'後衛2枚生存で王が毎T回復', p:[{k:'value',l:'回復量',v:5}],   desc:v=>`後衛2枚生存で毎T HP+${v.value}`},
+  statusBonus:     {label:'状態異常の敵に追加ダメ',   p:[{k:'value',l:'追加ダメ',v:3}], desc:v=>`状態異常の敵に+${v.value}`},
+  rage:            {label:'味方が倒れる毎に攻撃力up', p:[{k:'value',l:'上昇率 %',v:10,pct:1}], desc:v=>`味方が倒れる毎に攻+${v.value}%`},
+  rampUp:          {label:'ターン経過で徐々に強化',   p:[{k:'value',l:'毎T上昇 %',v:8,pct:1},{k:'max',l:'上限 %',v:40,pct:1}], desc:v=>`ターン毎に攻+${v.value}% 最大${v.max}%`},
+  spMax:           {label:'SPが一定以上で与ダメup',   p:[{k:'need',l:'必要SP',v:3},{k:'value',l:'上昇率 %',v:15,pct:1}], desc:v=>`SP${v.need}以上で与ダメ+${v.value}%`},
+  fullBoard:       {label:'5枚全員生存で全体強化',    p:[{k:'value',l:'強化率 %',v:20,pct:1}], desc:v=>`5枚全員生存で全体+${v.value}%`},
+  lastStand:       {label:'王だけになると背水強化',   p:[{k:'value',l:'強化率 %',v:40,pct:1}], desc:v=>`王だけになると全能力+${v.value}%`},
+  counter:         {label:'一定回数被弾で反撃',       p:[{k:'need',l:'必要被弾数',v:3},{k:'value',l:'反撃ダメ',v:8}], desc:v=>`被弾${v.need}回ごとに全体へ${v.value}反撃`},
+  autoCleanse:     {label:'味方の状態異常を自動治療', p:[], desc:()=>'味方の状態異常を自動治療'},
+  endure:          {label:'前衛の致死ダメをHP1で耐え', p:[], desc:()=>'前衛の致死ダメをHP1耐え'},
+  onStatusInflict: {label:'味方が状態異常付与で追撃', p:[{k:'value',l:'追加ダメ',v:6}], desc:v=>`味方が状態異常付与で追加${v.value}`},
+  elemNull:        {label:'特定属性の被ダメを無効',   p:[{k:'elem',l:'無効にする属性',v:'氷',sel:1}], desc:v=>`${v.elem}属性からの被ダメを無効`}
 };
 
 const $ = id => document.getElementById(id);
-let f1type = 'A';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* ---- セレクトの初期化 ---- */
-Object.keys(ELEM).forEach(e => $('f_elem').add(new Option(e, e)));
-Object.keys(RARITY).forEach(r => $('f_rarity').add(new Option(r, r)));
+/* 3枠ぶんの状態 */
+const slots = [
+  {on:true,  role:'front', name:'だし巻きアタック', cost:1, eff:'attack',       st:'burn'},
+  {on:true,  role:'front', name:'あまから包み',     cost:1, eff:'attackStatus', st:'burn'},
+  {on:true,  role:'back',  name:'やさしい出汁',     cost:1, eff:'gainSP',       st:'poison'}
+];
+
+Object.keys(ELEM).forEach(e => $('f_elem').add(new Option(e,e)));
+Object.keys(RARITY).forEach(r => $('f_rarity').add(new Option(r,r)));
 $('f_rarity').value = 'R';
-Object.entries(STATUS).forEach(([k,v]) => $('f1_status').add(new Option(v, k)));
-Object.entries(BACK_KINDS).forEach(([k,v]) => $('b_kind').add(new Option(v.label, k)));
-Object.entries(KING_TRIGGERS).forEach(([k,v]) => $('k_trigger').add(new Option(v.label, k)));
+Object.entries(KING_TRIGGERS).forEach(([k,v]) => $('k_trigger').add(new Option(v.label,k)));
 
-/* ---- 可変パラメータ欄 ---- */
-function renderParams(hostId, defs, prefix){
-  const host = $(hostId);
-  host.innerHTML = defs.map(d => {
-    if(d.sel === 'elem'){
-      return `<div><label>${d.label}</label><select id="${prefix}_${d.k}">`
-        + Object.keys(ELEM).map(e => `<option${e===d.v?' selected':''}>${e}</option>`).join('')
-        + `</select></div>`;
-    }
-    return `<div><label>${d.label}</label><input id="${prefix}_${d.k}" type="number" value="${d.v}"></div>`;
+/* ---- スキル枠のUI ---- */
+function renderSlots(){
+  $('slots').innerHTML = slots.map((s,i) => {
+    const def = EFFECTS[s.eff];
+    const params = def.p.map(d =>
+      `<div><label>${d.l}</label><input type="number" value="${s['p_'+d.k] !== undefined ? s['p_'+d.k] : d.v}" oninput="setP(${i},'${d.k}',this.value)"></div>`
+    ).join('');
+    const statusSel = def.status
+      ? `<div><label>状態異常</label><select onchange="setSt(${i},this.value)">`
+        + Object.entries(STATUS).map(([k,v]) => `<option value="${k}"${s.st===k?' selected':''}>${v}</option>`).join('')
+        + `</select></div>` : '';
+    return `<div class="slot${s.on?'':' off'}">
+      <div class="slot-head">
+        <span class="n">枠${i+1}</span>
+        <div class="seg">
+          <button class="${s.on?'on':''}" onclick="setOn(${i},true)">あり</button>
+          <button class="${s.on?'':'on'}" onclick="setOn(${i},false)">なし</button>
+        </div>
+        ${s.on ? `<div class="seg">
+          <button class="${s.role==='front'?'on':''}" onclick="setRole(${i},'front')">前衛</button>
+          <button class="${s.role==='back'?'on':''}" onclick="setRole(${i},'back')">後衛</button>
+        </div>` : ''}
+      </div>
+      ${s.on ? `<div class="row">
+        <div style="flex:2"><label>技名</label><input value="${esc(s.name)}" oninput="setName(${i},this.value)"></div>
+        <div style="flex:0 0 90px"><label>SP消費</label><select onchange="setCost(${i},this.value)">
+          ${[1,2,3].map(n=>`<option${s.cost===n?' selected':''}>${n}</option>`).join('')}</select></div>
+      </div>
+      <div style="margin-top:8px"><label>効果</label><select onchange="setEff(${i},this.value)">
+        ${Object.entries(EFFECTS).map(([k,v])=>`<option value="${k}"${s.eff===k?' selected':''}>${v.label}</option>`).join('')}
+      </select></div>
+      ${(params||statusSel) ? `<div class="row" style="margin-top:8px">${statusSel}${params}</div>` : ''}` : ''}
+    </div>`;
   }).join('');
-  defs.forEach(d => $(prefix+'_'+d.k).addEventListener('input', update));
-  if(defs.length === 0) host.innerHTML = '';
 }
-function syncBack(){
-  const kind = BACK_KINDS[$('b_kind').value];
-  renderParams('b_params', kind.params, 'bp');
-  if(kind.status){
-    $('b_params').insertAdjacentHTML('afterbegin',
-      `<div><label>状態異常</label><select id="bp_type">`
-      + Object.entries(STATUS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')
-      + `</select></div>`);
-    $('bp_type').addEventListener('change', update);
-  }
-  update();
-}
-function syncKing(){
-  renderParams('k_params', KING_TRIGGERS[$('k_trigger').value].params, 'kp');
+function setOn(i,v){ slots[i].on = v; renderSlots(); update(); }
+function setRole(i,v){ slots[i].role = v; renderSlots(); update(); }
+function setName(i,v){ slots[i].name = v; update(); }
+function setCost(i,v){ slots[i].cost = +v; update(); }
+function setEff(i,v){ slots[i].eff = v; Object.keys(slots[i]).forEach(k=>{ if(k.startsWith('p_')) delete slots[i][k]; }); renderSlots(); update(); }
+function setP(i,k,v){ slots[i]['p_'+k] = +v; update(); }
+function setSt(i,v){ slots[i].st = v; update(); }
+
+function renderKingParams(){
+  const def = KING_TRIGGERS[$('k_trigger').value];
+  $('k_params').innerHTML = def.p.map(d => d.sel
+    ? `<div><label>${d.l}</label><select id="kp_${d.k}">${Object.keys(ELEM).map(e=>`<option${e===d.v?' selected':''}>${e}</option>`).join('')}</select></div>`
+    : `<div><label>${d.l}</label><input id="kp_${d.k}" type="number" value="${d.v}"></div>`
+  ).join('');
+  def.p.forEach(d => $('kp_'+d.k).addEventListener('input', update));
   update();
 }
 
-/* ---- 入力からカード定義を組む ---- */
+/* ---- 入力 → カード定義 ---- */
+function buildSkill(s){
+  const def = EFFECTS[s.eff];
+  const o = {};
+  if(s.cost !== 1) o.cost = s.cost;
+  o.name = (s.name || '技').trim();
+  const g = k => { const d = def.p.find(x => x.k === k); return s['p_'+k] !== undefined ? s['p_'+k] : (d ? d.v : 0); };
+
+  const hasPower = def.p.some(d => d.k === 'power');
+  o.power = hasPower ? g('power') : 0;
+  if(def.all) o.allEnemies = true;
+  if(def.friendly) o.friendly = true;
+  if(def.dead) o.targetDead = true;
+  if(def.flag) o[def.flag] = true;
+  if(def.status) o.status = {type:s.st, chance:g('chance')/100};
+  if(def.wrap === 'revive') o.revive = {hpPct:g('hpPct')/100};
+  else if(def.wrap) o[def.wrap] = {amount:g('amount')/100, turns:g('turns')};
+  else def.p.forEach(d => { if(d.k !== 'power' && d.k !== 'chance') o[d.k] = g(d.k); });
+  return {role:s.role, skill:o};
+}
+
 function build(){
-  const id = ($('f_id').value || 'newcard').trim().replace(/[^A-Za-z0-9_]/g,'') || 'newcard';
-  const prov = $('f_prov').value === '1';
-  const name = ($('f_name').value || 'なまえ').trim() + (prov ? '(仮)' : '');
-  const elem = $('f_elem').value, rarity = $('f_rarity').value;
-  const hp = Math.max(1, +$('f_hp').value || 1);
-
-  const f0 = {name:($('f0_name').value||'通常攻撃').trim(), power:+$('f0_power').value||0};
-
-  const f1 = {name:($('f1_name').value||'特殊').trim(), power:+$('f1_power').value||0};
-  if(f1type === 'A'){
-    f1.status = {type:$('f1_status').value, chance:(+$('f1_chance').value||0)/100};
-  } else {
-    f1.cost = +$('f1_cost').value || 2;
-  }
-
-  const bk = $('b_kind').value, def = BACK_KINDS[bk];
-  const back = {name:($('b_name').value||'支援').trim(), power:0};
-  const bcost = +$('b_cost').value || 1;
-  if(bcost !== 1) back.cost = bcost;
-  if(def.friendly) back.friendly = true;
-  if(def.dead) back.targetDead = true;
-  if(def.flag) back[def.flag] = true;
-  const gp = k => +($('bp_'+k) ? $('bp_'+k).value : 0) || 0;
-  if(def.wrap === 'buffTarget') back.buffTarget = {amount:gp('amount')/100, turns:gp('turns')};
-  else if(def.wrap === 'buffAll') back.buffAll = {amount:gp('amount')/100, turns:gp('turns')};
-  else if(def.wrap === 'debuffAtk') back.debuffAtk = {amount:gp('amount')/100, turns:gp('turns')};
-  else if(def.wrap === 'debuffAll') back.debuffAll = {amount:gp('amount')/100, turns:gp('turns')};
-  else if(def.wrap === 'revive') back.revive = {hpPct:gp('hpPct')/100};
-  else if(def.status) back.status = {type:$('bp_type') ? $('bp_type').value : 'poison', chance:gp('chance')/100};
-  else if(def.all){ back.power = gp('power'); back.allEnemies = true; }
-  else def.params.forEach(d => { back[d.k] = gp(d.k); });
+  const id = ($('f_id').value||'newcard').trim().replace(/[^A-Za-z0-9_]/g,'') || 'newcard';
+  const name = ($('f_name').value||'なまえ').trim() + ($('f_prov').value === '1' ? '(仮)' : '');
+  const list = slots.filter(s => s.on).map(buildSkill);
 
   const trig = $('k_trigger').value, kdef = KING_TRIGGERS[trig];
-  const kv = {};
-  kdef.params.forEach(d => {
-    const el = $('kp_'+d.k);
-    kv[d.k] = d.sel === 'elem' ? (el ? el.value : d.v) : (+(el ? el.value : d.v) || 0);
-  });
-  const king = {name:($('k_name').value||'王スキル').trim(), desc:kdef.desc(kv), trigger:trig};
-  kdef.params.forEach(d => {
-    king[d.k] = d.sel === 'elem' ? kv[d.k] : (d.k === 'need' ? kv[d.k] : kv[d.k]/ (d.label.includes('%') ? 100 : 1));
-  });
+  const raw = {};
+  kdef.p.forEach(d => { const el = $('kp_'+d.k); raw[d.k] = d.sel ? (el?el.value:d.v) : (+(el?el.value:d.v)||0); });
+  const king = {name:($('k_name').value||'王スキル').trim(), desc:kdef.desc(raw), trigger:trig};
+  kdef.p.forEach(d => { king[d.k] = d.sel ? raw[d.k] : (d.pct ? raw[d.k]/100 : raw[d.k]); });
 
-  return {id, name, elem, rarity, hp, f0, f1, back, king};
+  return {id, name, elem:$('f_elem').value, rarity:$('f_rarity').value,
+          hp:Math.max(1,+$('f_hp').value||1), list, king};
 }
 
-/* ---- 表示用の短縮表記(ゲーム本体と同じ規則) ---- */
+/* ---- ゲーム本体と同じ短縮表記 ---- */
 function detail(s){
-  const p = ['SP' + (s.cost || 1)];
-  if(s.power > 0) p.push((s.allEnemies ? '全体威' : '威') + s.power);
-  if(s.heal) p.push('回復' + s.heal);
-  if(s.healAll) p.push('全体回復' + s.healAll);
-  if(s.revive) p.push('蘇生' + Math.round(s.revive.hpPct*100) + '%');
-  if(s.status) p.push(STATUS[s.status.type] + Math.round(s.status.chance*100) + '%');
-  if(s.drainSP) p.push('敵SP-' + s.drainSP);
-  if(s.gainSP) p.push('SP+' + s.gainSP);
+  const p = ['SP'+(s.cost||1)];
+  if(s.power > 0) p.push((s.allEnemies?'全体威':'威')+s.power);
+  if(s.heal) p.push('回復'+s.heal);
+  if(s.healAll) p.push('全体回復'+s.healAll);
+  if(s.revive) p.push('蘇生'+Math.round(s.revive.hpPct*100)+'%');
+  if(s.status) p.push(STATUS[s.status.type]+Math.round(s.status.chance*100)+'%');
+  if(s.stun) p.push('スタン');
+  if(s.sealTarget) p.push('封印');
+  if(s.swapEnemy) p.push('陣形かく乱');
+  if(s.drainSP) p.push('敵SP-'+s.drainSP);
+  if(s.gainSP) p.push('SP+'+s.gainSP);
   if(s.cleanse) p.push('治癒');
-  if(s.buffTarget) p.push('攻' + Math.round(s.buffTarget.amount*100) + '%');
-  if(s.buffAll) p.push('全攻' + Math.round(s.buffAll.amount*100) + '%');
-  if(s.debuffAll) p.push('全敵攻-' + Math.round(s.debuffAll.amount*100) + '%');
-  if(s.debuffAtk) p.push('敵攻-' + Math.round(s.debuffAtk.amount*100) + '%');
+  if(s.buffTarget) p.push('攻'+Math.round(s.buffTarget.amount*100)+'%');
+  if(s.buffAll) p.push('全攻'+Math.round(s.buffAll.amount*100)+'%');
+  if(s.debuffAll) p.push('全敵攻-'+Math.round(s.debuffAll.amount*100)+'%');
+  if(s.debuffAtk) p.push('敵攻-'+Math.round(s.debuffAtk.amount*100)+'%');
+  if(s.reflectStatus) p.push('異常返し');
   if(s.friendlyFreeMove) p.push('移動無料');
   return p.join(' ');
 }
 
-/* ---- プレビュー ---- */
 function preview(c){
   const m = ELEM[c.elem], rf = RARITY[c.rarity];
-  const row = (tag, s, king) => king
-    ? `<div class="sk king"><span class="sk-tag">王</span><span class="sk-body"><span class="sk-name">${esc(s.name)}</span><span class="sk-detail">${esc(s.desc)}</span></span></div>`
-    : `<div class="sk"><span class="sk-tag">${tag}</span><span class="sk-body"><span class="sk-name">${esc(s.name)}</span><span class="sk-detail">${esc(detail(s))}</span></span></div>`;
+  const rows = [0,1,2].map(i => {
+    const e = c.list[i];
+    if(!e) return '<div class="sk empty"></div>';
+    return `<div class="sk"><span class="sk-tag">${e.role==='front'?'前':'後'}</span>
+      <span class="sk-body"><span class="sk-name">${esc(e.skill.name)}</span>
+      <span class="sk-detail">${esc(detail(e.skill))}</span></span></div>`;
+  }).join('');
   $('prev').innerHTML =
     `<div class="c-accent" style="background:${rf}"></div>
      <div class="c-head" style="background:linear-gradient(180deg,${m.accent}22,${m.accent}44)">
        <span class="c-elem" style="background:${m.accent}">${m.icon}</span>
        <span class="c-name">${esc(c.name)}</span>
-       <span class="c-rarity" style="border-color:${rf};color:${rf}">${c.rarity}</span>
-     </div>
+       <span class="c-rarity" style="border-color:${rf};color:${rf}">${c.rarity}</span></div>
      <div class="c-art" style="background:${m.accent}1f"><span class="ph">🍳</span></div>
      <div class="c-stat"><span class="c-role">前衛</span><span class="c-hp">${c.hp}/${c.hp}</span></div>
      <div class="c-hpbar"><i></i></div>
-     <div class="c-skills">
-       ${row('前', c.f0)}${row('特', c.f1)}${row('後', c.back)}${row('王', c.king, true)}
+     <div class="c-skills">${rows}
+       <div class="sk king"><span class="sk-tag">王</span><span class="sk-body">
+       <span class="sk-name">${esc(c.king.name)}</span><span class="sk-detail">${esc(c.king.desc)}</span></span></div>
      </div>`;
 }
-const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 
-/* ---- バランス警告 ---- */
 function checks(c){
   const w = [];
-  const heavy = (c.f1.cost || 1) >= 2;
-  if(!heavy && c.f1.power >= c.f0.power) w.push('A型の特殊技は通常攻撃より威力を低くするのが基本(現在 特殊'+c.f1.power+' ≧ 通常'+c.f0.power+')');
-  if(heavy && c.f1.power <= c.f0.power) w.push('B型の重撃がSP'+(c.f1.cost)+'なのに通常攻撃以下の威力になっている');
-  if(heavy && c.f1.power < c.f0.power * (c.f1.cost)) w.push('SP'+c.f1.cost+'なら威力は目安 '+(c.f0.power*c.f1.cost)+' 前後がバランス的に妥当');
-  if(c.back.allEnemies) w.push('全体攻撃はロスター全体で少数に留める設計。既存は2枚だけ');
-  if(c.back.power > 0 && !c.back.allEnemies) w.push('後衛スキルは原則ダメージなしの支援。攻撃を持たせるなら全体攻撃枠として扱う');
-  const cap = {N:20, R:24, SR:28, UR:32}[c.rarity];
-  if(c.f0.power > cap) w.push(c.rarity+'の通常攻撃としては威力が高い(既存の上限は約'+cap+')');
-  const hpCap = {N:45, R:48, SR:52, UR:62}[c.rarity];
-  if(c.hp > hpCap) w.push(c.rarity+'としてHPが高い(既存の上限は'+hpCap+')');
-  $('warns').innerHTML = w.length
-    ? w.map(x => `<div class="warn">${esc(x)}</div>`).join('')
-    : '<div class="ok">設計モデルどおり。バランス上の警告なし</div>';
+  if(c.list.length === 0) w.push('スキルが1つもない。最低1枠は有効にする');
+  const fronts = c.list.filter(e => e.role === 'front');
+  const backs  = c.list.filter(e => e.role === 'back');
+  if(fronts.length === 0) w.push('前衛スキルが無いので、前衛枠に置くと何もできない(意図的なら問題なし)');
+  if(backs.length === 0)  w.push('後衛スキルが無いので、後衛枠に置くと何もできない(意図的なら問題なし)');
+  if(c.list.some(e => e.skill.allEnemies)) w.push('全体攻撃はロスター全体で少数に留める設計。現行15枚では2枚だけ');
+  fronts.forEach(e => {
+    const s = e.skill, cost = s.cost || 1;
+    if(cost >= 2 && s.power > 0){
+      const base = fronts.find(x => (x.skill.cost||1) === 1 && x.skill.power > 0);
+      if(base && s.power < base.skill.power * cost)
+        w.push(`「${s.name}」はSP${cost}なので威力 ${base.skill.power*cost} 前後が目安(現在${s.power})`);
+    }
+  });
+  const cap = {N:20,R:24,SR:28,UR:32}[c.rarity];
+  c.list.forEach(e => { if((e.skill.cost||1) === 1 && e.skill.power > cap && !e.skill.allEnemies)
+    w.push(`「${e.skill.name}」はSP1で威力${e.skill.power}。${c.rarity}の既存上限は約${cap}`); });
+  const hpCap = {N:45,R:48,SR:52,UR:62}[c.rarity];
+  if(c.hp > hpCap) w.push(`${c.rarity}としてHPが高い(既存の上限は${hpCap})`);
+  $('warns').innerHTML = w.length ? w.map(x=>`<div class="warn">${esc(x)}</div>`).join('')
+    : '<div class="ok">バランス上の警告なし</div>';
 }
 
-/* ---- コード出力 ---- */
 function js(v){
   if(typeof v === 'boolean') return v ? 'true' : 'false';
   if(typeof v === 'string') return "'" + v.replace(/'/g,"\\'") + "'";
   if(typeof v === 'number') return String(+v.toFixed(4)).replace(/^0\./,'.').replace(/^-0\./,'-.');
   if(Array.isArray(v)) return '[' + v.map(js).join(', ') + ']';
-  return '{' + Object.entries(v).map(([k,x]) => k + ':' + js(x)).join(', ') + '}';
-}
-function skillJs(s){
-  const o = {};
-  if(s.cost && s.cost !== 1) o.cost = s.cost;
-  Object.keys(s).forEach(k => { if(k !== 'cost') o[k] = s[k]; });
-  return 'mkSkill(' + js(o) + ')';
+  return '{' + Object.entries(v).map(([k,x]) => k+':'+js(x)).join(', ') + '}';
 }
 function codeOf(c){
+  const body = c.list.map(e => `${e.role === 'front' ? 'F' : 'B'}(${js(e.skill)})`);
+  const joined = body.length
+    ? body.map((b,i) => (i ? '             ' : '') + b).join(',\n')
+    : '';
   return `  ${c.id}:{name:${js(c.name)}, elem:${js(c.elem)}, rarity:${js(c.rarity)}, hp:${c.hp},\n`
-    + `    front:[ ${skillJs(c.f0)},\n`
-    + `            ${skillJs(c.f1)} ],\n`
-    + `    back:  ${skillJs(c.back)},\n`
+    + `    skills:[ ${joined} ],\n`
     + `    king:${js(c.king)}},`;
 }
 
 function update(){
   const c = build();
-  preview(c);
-  checks(c);
+  preview(c); checks(c);
   $('code').textContent = codeOf(c);
   $('k_desc_hint').textContent = 'カードに表示される説明: ' + c.king.desc;
 }
 
 function copyCode(){
-  const t = $('code').textContent;
-  navigator.clipboard.writeText(t).then(
-    () => { $('copied').textContent = 'コピーした'; setTimeout(()=>$('copied').textContent='', 1800); },
-    () => { $('copied').textContent = 'コピーできなかった(手動で選択して)'; }
-  );
+  navigator.clipboard.writeText($('code').textContent).then(
+    () => { $('copied').textContent = 'コピーした'; setTimeout(()=>$('copied').textContent='',1800); },
+    () => { $('copied').textContent = '手動で選択してコピーして'; });
 }
 
 const NAMES = [['たまごやき','tamago','無'],['とろけるチーズ','cheese','無'],['わさびちゃん','wasabi','毒'],
@@ -445,33 +414,25 @@ const NAMES = [['たまごやき','tamago','無'],['とろけるチーズ','chee
 function randomize(){
   const n = NAMES[Math.floor(Math.random()*NAMES.length)];
   $('f_name').value = n[0]; $('f_id').value = n[1]; $('f_elem').value = n[2];
-  const rs = ['N','R','R','SR','UR']; $('f_rarity').value = rs[Math.floor(Math.random()*rs.length)];
+  $('f_rarity').value = ['N','R','R','SR','UR'][Math.floor(Math.random()*5)];
   $('f_hp').value = 34 + Math.floor(Math.random()*24);
-  $('f0_power').value = 14 + Math.floor(Math.random()*10);
-  const heavy = Math.random() < .5;
-  setF1(heavy ? 'B' : 'A');
-  $('f1_power').value = heavy ? 28 + Math.floor(Math.random()*10) : 8 + Math.floor(Math.random()*4);
-  const ks = Object.keys(KING_TRIGGERS); $('k_trigger').value = ks[Math.floor(Math.random()*ks.length)];
-  const bs = Object.keys(BACK_KINDS); $('b_kind').value = bs[Math.floor(Math.random()*bs.length)];
-  syncBack(); syncKing();
+  const keys = Object.keys(EFFECTS);
+  const count = 1 + Math.floor(Math.random()*3);
+  slots.forEach((s,i) => {
+    s.on = i < count;
+    s.role = Math.random() < .6 ? 'front' : 'back';
+    s.eff = keys[Math.floor(Math.random()*keys.length)];
+    s.cost = Math.random() < .25 ? 2 : 1;
+    Object.keys(s).forEach(k => { if(k.startsWith('p_')) delete s[k]; });
+  });
+  const ks = Object.keys(KING_TRIGGERS);
+  $('k_trigger').value = ks[Math.floor(Math.random()*ks.length)];
+  renderSlots(); renderKingParams();
 }
 
-function setF1(v){
-  f1type = v;
-  [...$('f1_type').children].forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  $('f1_a').style.display = v === 'A' ? 'flex' : 'none';
-  $('f1_b').style.display = v === 'B' ? 'flex' : 'none';
-  update();
-}
-[...$('f1_type').children].forEach(b => b.addEventListener('click', () => setF1(b.dataset.v)));
-
-['f_id','f_name','f_elem','f_rarity','f_hp','f_prov','f0_name','f0_power',
- 'f1_name','f1_power','f1_status','f1_chance','f1_cost','b_name','b_cost','k_name']
-  .forEach(id => $(id).addEventListener('input', update));
-$('b_kind').addEventListener('change', syncBack);
-$('k_trigger').addEventListener('change', syncKing);
-
-syncBack(); syncKing();
+['f_id','f_name','f_elem','f_rarity','f_hp','f_prov','k_name'].forEach(id => $(id).addEventListener('input', update));
+$('k_trigger').addEventListener('change', renderKingParams);
+renderSlots(); renderKingParams();
 </script>
 </body>
 </html>

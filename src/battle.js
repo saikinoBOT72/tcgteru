@@ -15,7 +15,7 @@ function createCard(id){
   const t = CARD_DB[id];
   return {
     tplId:id, name:t.name, elem:t.elem, rarity:t.rarity, hp:t.hp, maxHp:t.hp,
-    front:t.front, back:t.back, king:t.king,
+    skills:t.skills, king:t.king,
     status:null, statusTurns:0, alive:true,
     atkBuff:0, atkBuffTurns:0, sealed:0, stunned:0, freeMove:false
   };
@@ -216,27 +216,50 @@ function inflictStatus(atkTk, defTk, defSlot, type, fx){
   }
 }
 
+/* ---- 遮蔽ルール ----------------------------------------
+   前衛はそれぞれ「斜め後ろ2枚」を覆っている。
+     frontL が塞ぐ: backL / king
+     frontR が塞ぐ: king / backR
+   前衛枠が空く(倒れる)と、その枠が覆っていた2枚が露出して
+   前衛スキルの標的に入る。王は左右どちらの穴からも露出する。
+   露出した枠に移動でカードを入れ直せば、また覆われる。
+   -------------------------------------------------------- */
+const FRONT_COVER = {frontL:['backL','king'], frontR:['king','backR']};
+
+function exposedSlots(tk){
+  const s = teams[tk].slots;
+  const out = [];
+  Object.keys(FRONT_COVER).forEach(f => {
+    const fc = s[f];
+    if(fc && fc.alive) return;               // その前衛枠は埋まっている
+    FRONT_COVER[f].forEach(k => {
+      if(s[k] && s[k].alive && out.indexOf(k) < 0) out.push(k);
+    });
+  });
+  return out;
+}
+
 /* ---- ターゲット候補 ---- */
 function validTargets(tk, slotKey, skill){
   if(skill.targetDead) return {teamKey:tk, slots:deadSlots(tk)};
   if(skill.friendly)   return {teamKey:tk, slots:aliveSlots(tk)};
   const opp = foe(tk);
-  if(roleOf(slotKey) === 'front'){
-    const f = aliveSlots(opp, k => roleOf(k) === 'front');
-    if(f.length > 0) return {teamKey:opp, slots:f};
-    return {teamKey:opp, slots:aliveSlots(opp, k => roleOf(k) !== 'front')};
+  if(skill.role === 'front'){
+    const fronts = aliveSlots(opp, k => roleOf(k) === 'front');
+    return {teamKey:opp, slots: fronts.concat(exposedSlots(opp))};
   }
   return {teamKey:opp, slots:aliveSlots(opp)};
 }
 
-function skillOf(card, slotKey, kind){
-  if(kind === 'back') return card.back;
-  return card.front[kind === 'f0' ? 0 : 1];
-}
-function canUse(slotKey, kind){
-  const r = roleOf(slotKey);
-  if(kind === 'back') return r === 'back';
-  return r === 'front';
+function skillAt(card, idx){ return card.skills ? card.skills[idx] : null; }
+function canUse(slotKey, skill){ return !!skill && roleOf(slotKey) === skill.role; }
+
+/* その枠から今使えるスキルを [{idx, skill}] で返す */
+function usableSkills(tk, slotKey){
+  const c = teams[tk].slots[slotKey];
+  if(!c || !c.alive || c.sealed > 0) return [];
+  return (c.skills || []).map((sk, idx) => ({idx, skill:sk}))
+    .filter(o => canUse(slotKey, o.skill));
 }
 
 /* =========================================================
@@ -472,15 +495,13 @@ function aiStep(){
   const t = teams.enemy;
   if(t.sp < 1){ backToPlayer(); return; }
 
-  /* SP2以上のスキルがあるので、今のSPで実際に撃てる手だけを候補にする */
+  /* 今のSPで実際に撃てる手だけを候補にする */
   const options = [];
-  aliveSlots('enemy', k => roleOf(k) !== 'king' && t.slots[k].sealed <= 0).forEach(k => {
-    const card = t.slots[k];
-    const cand = roleOf(k) === 'front' ? [card.front[0], card.front[1]] : [card.back];
-    cand.forEach(sk => {
-      if(t.sp < sk.cost) return;
-      if(validTargets('enemy', k, sk).slots.length === 0) return;
-      options.push({slotKey:k, skill:sk});
+  aliveSlots('enemy', k => roleOf(k) !== 'king').forEach(k => {
+    usableSkills('enemy', k).forEach(o => {
+      if(t.sp < o.skill.cost) return;
+      if(validTargets('enemy', k, o.skill).slots.length === 0) return;
+      options.push({slotKey:k, skill:o.skill});
     });
   });
   if(options.length === 0){ backToPlayer(); return; }
@@ -500,6 +521,7 @@ function aiStep(){
     let sc = skill.friendly || skill.targetDead
       ? (tc.maxHp - tc.hp)
       : affinityMult(c.elem, tc.elem) * 10 - tc.hp * .1;
+    if(!skill.friendly && !skill.targetDead && k === 'king') sc += 8;  // 露出した王は好機
     sc += Math.random() * 2;
     if(sc > bestScore){ bestScore = sc; best = k; }
   });
@@ -510,13 +532,13 @@ function aiStep(){
 }
 
 /* ---- プレイヤー操作 ---- */
-function activateSkill(tk, sk, kind){
+function activateSkill(tk, sk, idx){
   if(state.over || state.turn !== 'player' || tk !== 'player') return;
   if(state.pendingAction || state.moveMode) return;
   const c = teams.player.slots[sk];
   if(!c || !c.alive || c.sealed > 0) return;
-  if(!canUse(sk, kind)) return;
-  const skill = skillOf(c, sk, kind);
+  const skill = skillAt(c, +idx);
+  if(!canUse(sk, skill)) return;
   if(teams.player.sp < skill.cost) return;
   if(validTargets('player', sk, skill).slots.length === 0) return;
   state.pendingAction = {slotKey:sk, skill};

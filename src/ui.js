@@ -36,18 +36,23 @@ function spHtml(tk){
   return `<span>${tk === 'player' ? '自分SP' : '敵SP'}</span><span class="teamsp-value">${teams[tk].sp}</span>${turnInfo}`;
 }
 
-/* ---- スキル1行(ctx がある時だけタップ可能になる) ---- */
-function skRow(skill, tag, isKing, ctx){
-  if(isKing){
-    return `<div class="sk king"><span class="sk-tag">王</span><span class="sk-body">
-      <span class="sk-name">${skill.name}</span><span class="sk-detail">${skill.desc}</span></span></div>`;
-  }
+/* ---- スキル1行 ----
+   skill が無い枠は空欄のまま描く(スキル数が3未満のカード用)。
+   タグは枠の位置ではなく skill.role から出すので、前衛2/後衛1 でも
+   前衛1/後衛2 でも正しく「前」「後」が並ぶ。 */
+function skRow(skill, ctx){
+  if(!skill) return '<div class="sk empty"></div>';
   const usable = !!(ctx && ctx.usable);
-  return `<div class="sk${usable ? ' usable' : ''}"${usable ? ` onclick="event.stopPropagation();activateSkill('${ctx.tk}','${ctx.sk}','${ctx.kind}')"` : ''}>
+  const tag = skill.role === 'front' ? '前' : '後';
+  return `<div class="sk${usable ? ' usable' : ''}"${usable ? ` onclick="event.stopPropagation();activateSkill('${ctx.tk}','${ctx.sk}',${ctx.idx})"` : ''}>
     <span class="sk-tag">${tag}</span>
     <span class="sk-body"><span class="sk-name">${skill.name}</span><span class="sk-detail">${skillDetail(skill)}</span></span>
     ${usable ? '<span class="sk-go">▶</span>' : ''}
   </div>`;
+}
+function kingRow(k){
+  return `<div class="sk king"><span class="sk-tag">王</span><span class="sk-body">
+    <span class="sk-name">${k.name}</span><span class="sk-detail">${k.desc}</span></span></div>`;
 }
 
 /* ---- カードの面(バトルも編成も同じ見た目を共有する) ----
@@ -56,15 +61,21 @@ function skRow(skill, tag, isKing, ctx){
 function cardFaceHtml(c, role, ctx){
   const meta = ELEM[c.elem] || {};
   const rar = RARITY[c.rarity] || RARITY.N;
-
   const live = ctx && teams && state;
-  const mk = (kind, roleMatch) => {
-    if(!live) return null;
-    const usable = ctx.tk === 'player' && state.turn === 'player' && !state.over
-      && !state.pendingAction && !state.moveMode
-      && roleMatch && c.alive && c.sealed <= 0 && teams.player.sp >= (kind === 'back' ? c.back.cost : c.front[kind === 'f0' ? 0 : 1].cost);
-    return {tk:ctx.tk, sk:ctx.sk, kind, usable};
-  };
+
+  const rows = [0,1,2].map(i => {
+    const skill = c.skills ? c.skills[i] : null;
+    if(!skill) return skRow(null, null);
+    let cx = null;
+    if(live){
+      const usable = ctx.tk === 'player' && state.turn === 'player' && !state.over
+        && !state.pendingAction && !state.moveMode
+        && c.alive && c.sealed <= 0
+        && role === skill.role && teams.player.sp >= skill.cost;
+      cx = {tk:ctx.tk, sk:ctx.sk, idx:i, usable};
+    }
+    return skRow(skill, cx);
+  }).join('');
 
   const canMove = live && ctx.tk === 'player' && state.turn === 'player' && !state.over
     && role !== 'king' && c.alive && !state.pendingAction && !state.moveMode
@@ -92,12 +103,7 @@ function cardFaceHtml(c, role, ctx){
       <span class="c-hp">${c.hp}/${c.maxHp}</span>
     </div>
     <div class="c-hpbar"><i style="width:${Math.round(c.hp / c.maxHp * 100)}%"></i></div>
-    <div class="c-skills">
-      ${skRow(c.front[0], '前', false, mk('f0', role === 'front'))}
-      ${skRow(c.front[1], '特', false, mk('f1', role === 'front'))}
-      ${skRow(c.back, '後', false, mk('back', role === 'back'))}
-      ${skRow(c.king, '王', true, null)}
-    </div>
+    <div class="c-skills">${rows}${kingRow(c.king)}</div>
     ${st.length ? `<div class="c-status">${st.join('')}</div>` : ''}`;
 }
 
