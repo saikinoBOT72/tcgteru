@@ -10,23 +10,36 @@ permissions:
   pages: write
   id-token: write
 
+# Pages のデプロイは GitHub 側で直列化される。途中でキャンセルすると
+# その回のデプロイが「進行中」のまま残り、以降の実行が詰まるため、
+# cancel-in-progress は必ず false にする(実際にこれで15分ハングした)。
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      # 公開するファイルだけを _site に集める。
+      # リポジトリ全体を上げると .git まで含まれて無駄が大きい。
+      - name: Stage site files
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r src _site/
+          cp -r tools _site/
+          ls -R _site
+
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
